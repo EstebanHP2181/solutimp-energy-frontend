@@ -18,24 +18,22 @@ Este directorio es un **repositorio Git propio** (no forma parte de un monorepo 
 
 - Node.js **20+** (recomendado LTS) con **npm** (o pnpm/yarn equivalente).
 
-En este entorno de servidor no se ejecutó `npm install` por ausencia de `npm` en el PATH; en tu máquina local o CI instala dependencias con los comandos de abajo.
-
 ## Configuración
 
-1. Copia variables de entorno:
+1. Copia variables de entorno (desarrollo):
 
    ```bash
    cp .env.example .env
    ```
 
-2. Define el **origen** del sitio (sin path `/api` en la variable). Las rutas del API incluyen el prefijo completo en cada llamada.
+2. Define la **base del API** (sin path `/api` en la variable). Las rutas del API incluyen el prefijo completo en cada llamada (`apiUrl('/api/v1/energy/...')`).
 
    ```bash
-   # Producción (NGINX sirve front en / y API en /api/... sin reescribir el path)
-   VITE_API_BASE_URL=https://energy.solutimp.cl
+   # Producción (build): ver `.env.production` y docs/DEPLOY-FRONTEND.md
+   VITE_API_BASE_URL=https://api.energy.solutimp.cl
 
-   # Local contra uvicorn directo (si el backend expone /api/v1/... en ese host)
-   VITE_API_BASE_URL=http://localhost:8010
+   # Local contra uvicorn
+   VITE_API_BASE_URL=http://127.0.0.1:8010
    ```
 
    Sin barra final en la base. Usa `apiUrl('/api/v1/energy/bom/auto')` (y `getApiBaseUrl()`) desde `src/api/client.ts`.
@@ -44,10 +42,10 @@ En este entorno de servidor no se ejecutó `npm install` por ausencia de `npm` e
 
 | Base (`VITE_API_BASE_URL` o primer arg de `joinApiUrl`) | Path | Resultado |
 | --- | --- | --- |
-| `https://energy.solutimp.cl` | `/api/v1/energy/bom/auto` | `https://energy.solutimp.cl/api/v1/energy/bom/auto` |
-| `https://energy.solutimp.cl/` (se normaliza) | `/api/v1/energy/bom/auto` | `https://energy.solutimp.cl/api/v1/energy/bom/auto` |
-| `https://energy.solutimp.cl` | `api/v1/energy/bom/auto` (sin `/` inicial) | `https://energy.solutimp.cl/api/v1/energy/bom/auto` |
-| `https://energy.solutimp.cl` | `/api//v1/energy///x` | `https://energy.solutimp.cl/api/v1/energy/x` (sin dobles `/`) |
+| `https://api.energy.solutimp.cl` | `/api/v1/energy/bom/auto` | `https://api.energy.solutimp.cl/api/v1/energy/bom/auto` |
+| `https://api.energy.solutimp.cl/` (se normaliza) | `/api/v1/energy/bom/auto` | `https://api.energy.solutimp.cl/api/v1/energy/bom/auto` |
+| `https://api.energy.solutimp.cl` | `api/v1/energy/bom/auto` (sin `/` inicial) | `https://api.energy.solutimp.cl/api/v1/energy/bom/auto` |
+| `https://api.energy.solutimp.cl` | `/api//v1/energy///x` | `https://api.energy.solutimp.cl/api/v1/energy/x` (sin dobles `/`) |
 
 Despliegue NGINX y checklist DNS: **`docs/DEPLOY-ENERGY-SUBDOMAIN.md`**.
 
