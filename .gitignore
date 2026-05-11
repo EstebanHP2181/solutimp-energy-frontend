@@ -1,0 +1,34 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+.env
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# Vite / tooling
+.vite/
+*.tsbuildinfo
+
+# Tests & coverage
+coverage/
+.nyc_output/
+
+# Vitest
+vitest.config.*.timestamp-*
+
+# OS / temp
+*.tmp
+*.temp
+.cache/
+
+# Package manager locks (opcional: descomenta si usas solo uno y quieres ignorar el resto)
+# pnpm-lock.yaml
+# yarn.lock

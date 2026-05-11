@@ -1,0 +1,37 @@
+# CI/CD futuro: añadir despliegue a VPS, preview por PR, análisis SAST.
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      # Usar `npm ci` cuando exista `package-lock.json` versionado en el repo.
+      - name: Install
+        run: npm install
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: https://energy.solutimp.cl
+          VITE_ROBOTS_NOINDEX: "true"
