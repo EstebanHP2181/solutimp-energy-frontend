@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { computed, inject } from 'vue'
+import { computed, inject, nextTick, onUnmounted, ref, watch } from 'vue'
 import { calculadoraFlowKey } from '@/composables/useCalculadoraFlow'
-import { getEnergyNarrativeContext } from '@/calculadora/narrativeEngine'
+import {
+  AUTONOMY_RANGE_DISCLAIMER,
+  getEnergyNarrativeContext,
+} from '@/calculadora/narrativeEngine'
 import { formatCLP } from '@/shared/formatCLP'
 import { buildWhatsAppLink } from '@/shared/whatsapp'
 import CalcContactBlock from './CalcContactBlock.vue'
@@ -15,7 +18,74 @@ const narration = computed(() =>
   })
 )
 
-const continuityFirst = computed(() => narration.value.primaryKpiMode !== 'savings')
+const visualPriority = computed(() => narration.value.primaryKpiMode)
+
+const showContactForm = ref(false)
+
+watch(
+  () => [flow.propertyType, flow.mainGoal] as const,
+  () => {
+    showContactForm.value = false
+  }
+)
+
+onUnmounted(() => {
+  showContactForm.value = false
+})
+
+function revealContactForm() {
+  showContactForm.value = true
+  nextTick(() => {
+    const el = document.getElementById('calc-name')
+    el?.focus({ preventScroll: false })
+    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  })
+}
+
+/** Orden visual por primaryKpiMode (flex `order` en .plan-flow). */
+const slotOrder = computed(() => {
+  const m = visualPriority.value
+  if (m === 'continuity') {
+    return {
+      backupEarly: 10,
+      autonomy: 20,
+      savings: 30,
+      annual: 35,
+      compare: 40,
+      narrative: 50,
+      sistemaOrphan: 55,
+      backupLate: 99,
+      coverage: 99,
+      sistema: 99,
+    }
+  }
+  if (m === 'coverage') {
+    return {
+      coverage: 10,
+      sistema: 20,
+      savings: 30,
+      annual: 35,
+      compare: 40,
+      narrative: 45,
+      backupLate: 50,
+      backupEarly: 99,
+      autonomy: 99,
+      sistemaOrphan: 99,
+    }
+  }
+  return {
+    savings: 10,
+    annual: 15,
+    compare: 20,
+    narrative: 30,
+    sistemaOrphan: 35,
+    backupLate: 40,
+    backupEarly: 99,
+    autonomy: 99,
+    coverage: 99,
+    sistema: 99,
+  }
+})
 
 const sim = computed(() => flow.simulationResult)
 const econ = computed(() => sim.value?.economics)
@@ -157,6 +227,18 @@ const systemTeaser = computed(() => {
   return parts.length ? parts.join(' · ') : null
 })
 
+const showNarrativeSpecs = computed(() => visualPriority.value !== 'coverage')
+
+const showCoverageSistema = computed(
+  () =>
+    visualPriority.value === 'coverage' &&
+    (!!systemTeaser.value || narrativeKwpStr.value != null || narrativePanelsN.value != null)
+)
+
+const showSistemaOrphan = computed(
+  () => !narrativeBillFormatted.value && !!systemTeaser.value && visualPriority.value !== 'coverage'
+)
+
 /** Barra: ancla = boleta de referencia (declarada o estimada); segmentos = nueva boleta + ahorro. */
 const compareBar = computed(() => {
   const cur = referenceBill.value
@@ -207,11 +289,17 @@ const waHref = computed(() => {
       <p v-if="narration.mainClaim" class="plan-claim">{{ narration.mainClaim }}</p>
     </header>
 
-    <template v-if="continuityFirst">
-      <section class="plan-backup plan-backup--prominent animate" style="animation-delay: 0.05s">
+    <div class="plan-flow">
+      <!-- Continuidad: respaldo + sistemas protegidos primero -->
+      <section
+        v-if="visualPriority === 'continuity'"
+        class="plan-slot plan-backup plan-backup--prominent animate"
+        :style="{ order: slotOrder.backupEarly }"
+      >
         <h3 class="plan-backup-title">{{ narration.backupTitle }}</h3>
         <p class="plan-backup-lead">{{ narration.backupCopy }}</p>
-        <ul class="plan-chip-list" aria-label="Ejemplos de cargas críticas">
+        <h4 class="plan-systems-heading">Sistemas protegidos</h4>
+        <ul class="plan-chip-list" aria-label="Ejemplos de cargas protegidas">
           <li v-for="(c, i) in narration.protectedLoadChips" :key="i" class="plan-chip">
             <span class="plan-chip-ico" aria-hidden="true">✓</span>{{ c }}
           </li>
@@ -219,9 +307,70 @@ const waHref = computed(() => {
         <p class="plan-backup-foot">{{ narration.backupFootDisclaimer }}</p>
       </section>
 
-      <section class="plan-kpi animate" style="animation-delay: 0.08s">
+      <!-- Cobertura (parcela/campo): autonomía referencial -->
+      <section
+        v-if="visualPriority === 'coverage' && narration.referentialAutonomy"
+        class="plan-slot plan-coverage animate"
+        :style="{ order: slotOrder.coverage }"
+      >
+        <h3 class="plan-coverage-title">Cobertura energética</h3>
+        <div class="plan-autonomy plan-autonomy--hero">
+          <p class="plan-autonomy-kpi">Autonomía referencial</p>
+          <p class="plan-autonomy-range">
+            Entre {{ narration.referentialAutonomy.hoursMin }}–{{ narration.referentialAutonomy.hoursMax }} h
+            <span class="plan-autonomy-scope">{{ narration.referentialAutonomy.scopeLine }}</span>
+          </p>
+          <p class="plan-autonomy-disclaimer">{{ AUTONOMY_RANGE_DISCLAIMER }}</p>
+        </div>
+      </section>
+
+      <!-- Continuidad: KPI autonomía (rangos referenciales) -->
+      <section
+        v-if="visualPriority === 'continuity' && narration.referentialAutonomy"
+        class="plan-slot plan-autonomy plan-autonomy--hero animate"
+        :style="{ order: slotOrder.autonomy }"
+      >
+        <p class="plan-autonomy-kpi">Autonomía referencial</p>
+        <p class="plan-autonomy-range">
+          Entre {{ narration.referentialAutonomy.hoursMin }}–{{ narration.referentialAutonomy.hoursMax }} h
+          <span class="plan-autonomy-scope">{{ narration.referentialAutonomy.scopeLine }}</span>
+        </p>
+        <p class="plan-autonomy-disclaimer">{{ AUTONOMY_RANGE_DISCLAIMER }}</p>
+      </section>
+
+      <!-- Cobertura: sistema recomendado -->
+      <section
+        v-if="showCoverageSistema"
+        class="plan-slot plan-sistema animate"
+        :style="{ order: slotOrder.sistema }"
+      >
+        <h3 class="plan-sistema-title">Sistema recomendado</h3>
+        <p v-if="systemTeaser" class="plan-sistema-lead">{{ systemTeaser }}</p>
+        <template v-if="narrativeKwpStr != null || narrativePanelsN != null">
+          <p class="plan-narr-callout">Estimamos un sistema cercano a:</p>
+          <ul class="plan-narr-specs" aria-label="Tamaño de sistema estimado">
+            <li v-if="narrativeKwpStr != null" class="plan-narr-spec">
+              <span class="plan-narr-ico" aria-hidden="true">☀️</span>
+              <span><strong>{{ narrativeKwpStr }} kWp</strong></span>
+            </li>
+            <li v-if="narrativePanelsN != null" class="plan-narr-spec">
+              <span class="plan-narr-ico" aria-hidden="true">🔋</span>
+              <span><strong>{{ narrativePanelsN }} paneles solares</strong></span>
+            </li>
+          </ul>
+        </template>
+      </section>
+
+      <!-- Ahorro mensual -->
+      <section
+        class="plan-slot plan-kpi animate"
+        :class="{ 'plan-kpi--secondary': visualPriority !== 'savings' }"
+        :style="{ order: slotOrder.savings }"
+      >
         <template v-if="monthlySavingsUi.kind === 'lowConsumption'">
-          <p class="plan-kpi-label">Ahorro mensual referencial</p>
+          <p class="plan-kpi-label">
+            {{ visualPriority === 'savings' ? 'Ahorro mensual estimado' : 'Ahorro mensual referencial' }}
+          </p>
           <p class="plan-kpi-note">
             Tu nivel de consumo permite evaluar un sistema optimizado para ahorro base y respaldo inteligente.
           </p>
@@ -239,40 +388,115 @@ const waHref = computed(() => {
           <p v-if="monthlySavingsUi.kind === 'range' && monthlySavingsUi.sub" class="plan-kpi-range">
             {{ monthlySavingsUi.sub }}
           </p>
-          <p v-if="monthlySavingsUi.kind === 'amount' || monthlySavingsUi.kind === 'range'" class="plan-kpi-complement">
+          <p
+            v-if="visualPriority === 'continuity' && (monthlySavingsUi.kind === 'amount' || monthlySavingsUi.kind === 'range')"
+            class="plan-kpi-complement"
+          >
             Beneficio de ahorro referencial, complementario a la continuidad energética.
           </p>
-        </template>
-      </section>
-    </template>
-
-    <template v-else>
-      <section class="plan-kpi animate" style="animation-delay: 0.05s">
-        <template v-if="monthlySavingsUi.kind === 'lowConsumption'">
-          <p class="plan-kpi-label">Ahorro mensual estimado</p>
-          <p class="plan-kpi-note">
-            Tu nivel de consumo permite evaluar un sistema optimizado para ahorro base y respaldo inteligente.
-          </p>
-        </template>
-        <template v-else>
-          <p class="plan-kpi-label">{{ narration.primaryKpiLabel }}</p>
           <p
-            v-if="monthlySavingsUi.kind === 'amount' || monthlySavingsUi.kind === 'range'"
-            class="plan-kpi-value"
+            v-if="visualPriority === 'coverage' && (monthlySavingsUi.kind === 'amount' || monthlySavingsUi.kind === 'range')"
+            class="plan-kpi-complement"
           >
-            {{ monthlySavingsUi.kind === 'amount' ? monthlySavingsUi.text : monthlySavingsUi.main }}
-          </p>
-          <p v-else class="plan-kpi-value plan-kpi-value--soft">—</p>
-          <p class="plan-kpi-unit">al mes</p>
-          <p v-if="monthlySavingsUi.kind === 'range' && monthlySavingsUi.sub" class="plan-kpi-range">
-            {{ monthlySavingsUi.sub }}
+            Complementario a cobertura y autonomía referencial en campo o parcela.
           </p>
         </template>
       </section>
 
-      <section class="plan-backup plan-backup--prominent animate" style="animation-delay: 0.08s">
+      <p
+        v-if="annualSavingsHero"
+        class="plan-slot plan-annual animate"
+        :style="{ order: slotOrder.annual }"
+      >
+        Equivale a aprox. <strong>{{ annualSavingsHero }}</strong> al año
+      </p>
+
+      <section class="plan-slot plan-compare animate" :style="{ order: slotOrder.compare }">
+        <div class="plan-cards">
+          <div class="plan-card">
+            <span class="plan-card-label">{{ referenceBillLabel }}</span>
+            <span class="plan-card-val">{{ referenceBillDisplay }}</span>
+          </div>
+          <div class="plan-card plan-card--solar">
+            <span class="plan-card-label">Escenario con solar</span>
+            <span class="plan-card-val">{{ solarBillDisplay }}</span>
+            <span class="plan-card-hint">Valor referencial sujeto a evaluación técnica.</span>
+          </div>
+        </div>
+
+        <div v-if="compareBar.hasData" class="plan-bar-wrap" aria-hidden="true">
+          <div class="plan-bar-total">
+            <div class="plan-bar-new" :style="{ width: compareBar.newPct + '%' }" />
+            <div class="plan-bar-save" :style="{ width: compareBar.savingsPct + '%' }" />
+          </div>
+          <div class="plan-bar-legend">
+            <span><span class="dot dot--new" aria-hidden="true" /> Nueva boleta ({{ compareBar.newPct }}%)</span>
+            <span><span class="dot dot--save" aria-hidden="true" /> Ahorro ({{ compareBar.savingsPct }}%)</span>
+          </div>
+        </div>
+        <p v-else class="plan-bar-fallback">
+          Comparación visual cuando haya datos de boleta de referencia y escenario solar.
+        </p>
+      </section>
+
+      <div
+        v-if="narrativeBillFormatted"
+        class="plan-slot plan-narrative animate"
+        :style="{ order: slotOrder.narrative }"
+      >
+        <p v-if="declaredMonthlyBill != null" class="plan-narr-line">
+          Con una boleta declarada de <strong class="plan-narr-num">{{ narrativeBillFormatted }}</strong>,
+        </p>
+        <p v-else class="plan-narr-line">
+          Con una boleta de referencia de <strong class="plan-narr-num">{{ narrativeBillFormatted }}</strong>,
+        </p>
+        <p class="plan-narr-sub">{{ narration.narrativeConsumptionHint }}</p>
+
+        <template v-if="showNarrativeSpecs">
+          <template v-if="narrativeKwpStr != null || narrativePanelsN != null">
+            <p class="plan-narr-callout">Estimamos un sistema cercano a:</p>
+            <ul class="plan-narr-specs" aria-label="Tamaño de sistema estimado">
+              <li v-if="narrativeKwpStr != null" class="plan-narr-spec">
+                <span class="plan-narr-ico" aria-hidden="true">☀️</span>
+                <span><strong>{{ narrativeKwpStr }} kWp</strong></span>
+              </li>
+              <li v-if="narrativePanelsN != null" class="plan-narr-spec">
+                <span class="plan-narr-ico" aria-hidden="true">🔋</span>
+                <span><strong>{{ narrativePanelsN }} paneles solares</strong></span>
+              </li>
+            </ul>
+          </template>
+          <p v-else class="plan-narr-fallback">
+            Solutimp Energy podría dimensionar un sistema solar acorde a tu perfil y consumo.
+          </p>
+        </template>
+
+        <div v-if="narrativeRoiBlock" class="plan-narr-roi">
+          <p class="plan-narr-roi-line">Esto podría ayudarte a recuperar tu inversión</p>
+          <p class="plan-narr-roi-line">
+            en aproximadamente <strong class="plan-narr-num">{{ narrativeRoiBlock.roiStr }} años</strong>.
+          </p>
+          <p v-if="narrativeRoiBlock.lifeLine" class="plan-narr-roi-life">{{ narrativeRoiBlock.lifeLine }}</p>
+        </div>
+      </div>
+
+      <div
+        v-if="showSistemaOrphan"
+        class="plan-slot plan-system animate"
+        :style="{ order: slotOrder.sistemaOrphan }"
+      >
+        {{ systemTeaser }}
+      </div>
+
+      <!-- Ahorro primero: respaldo complementario al final -->
+      <section
+        v-if="visualPriority === 'savings'"
+        class="plan-slot plan-backup plan-backup--subtle animate"
+        :style="{ order: slotOrder.backupLate }"
+      >
         <h3 class="plan-backup-title">{{ narration.backupTitle }}</h3>
         <p class="plan-backup-lead">{{ narration.backupCopy }}</p>
+        <h4 class="plan-systems-heading">Sistemas que podrías proteger</h4>
         <ul class="plan-chip-list" aria-label="Ejemplos de cargas críticas">
           <li v-for="(c, i) in narration.protectedLoadChips" :key="i" class="plan-chip">
             <span class="plan-chip-ico" aria-hidden="true">✓</span>{{ c }}
@@ -280,75 +504,23 @@ const waHref = computed(() => {
         </ul>
         <p class="plan-backup-foot">{{ narration.backupFootDisclaimer }}</p>
       </section>
-    </template>
 
-    <p v-if="annualSavingsHero" class="plan-annual animate" style="animation-delay: 0.1s">
-      Equivale a aprox. <strong>{{ annualSavingsHero }}</strong> al año
-    </p>
-
-    <div v-if="narrativeBillFormatted" class="plan-narrative animate" style="animation-delay: 0.11s">
-      <p v-if="declaredMonthlyBill != null" class="plan-narr-line">
-        Con una boleta declarada de <strong class="plan-narr-num">{{ narrativeBillFormatted }}</strong>,
-      </p>
-      <p v-else class="plan-narr-line">
-        Con una boleta de referencia de <strong class="plan-narr-num">{{ narrativeBillFormatted }}</strong>,
-      </p>
-      <p class="plan-narr-sub">{{ narration.narrativeConsumptionHint }}</p>
-
-      <template v-if="narrativeKwpStr != null || narrativePanelsN != null">
-        <p class="plan-narr-callout">Estimamos un sistema cercano a:</p>
-        <ul class="plan-narr-specs" aria-label="Tamaño de sistema estimado">
-          <li v-if="narrativeKwpStr != null" class="plan-narr-spec">
-            <span class="plan-narr-ico" aria-hidden="true">☀️</span>
-            <span><strong>{{ narrativeKwpStr }} kWp</strong></span>
-          </li>
-          <li v-if="narrativePanelsN != null" class="plan-narr-spec">
-            <span class="plan-narr-ico" aria-hidden="true">🔋</span>
-            <span><strong>{{ narrativePanelsN }} paneles solares</strong></span>
+      <!-- Cobertura: respaldo complementario -->
+      <section
+        v-if="visualPriority === 'coverage'"
+        class="plan-slot plan-backup plan-backup--subtle animate"
+        :style="{ order: slotOrder.backupLate }"
+      >
+        <h3 class="plan-backup-title">Respaldo complementario</h3>
+        <p class="plan-backup-lead">{{ narration.backupCopy }}</p>
+        <h4 class="plan-systems-heading">Ejemplos de cargas</h4>
+        <ul class="plan-chip-list" aria-label="Ejemplos de cargas críticas">
+          <li v-for="(c, i) in narration.protectedLoadChips" :key="i" class="plan-chip">
+            <span class="plan-chip-ico" aria-hidden="true">✓</span>{{ c }}
           </li>
         </ul>
-      </template>
-      <p v-else class="plan-narr-fallback">
-        Solutimp Energy podría dimensionar un sistema solar acorde a tu perfil y consumo.
-      </p>
-
-      <div v-if="narrativeRoiBlock" class="plan-narr-roi">
-        <p class="plan-narr-roi-line">Esto podría ayudarte a recuperar tu inversión</p>
-        <p class="plan-narr-roi-line">
-          en aproximadamente <strong class="plan-narr-num">{{ narrativeRoiBlock.roiStr }} años</strong>.
-        </p>
-        <p v-if="narrativeRoiBlock.lifeLine" class="plan-narr-roi-life">{{ narrativeRoiBlock.lifeLine }}</p>
-      </div>
-    </div>
-
-    <section class="plan-compare animate" style="animation-delay: 0.12s">
-      <div class="plan-cards">
-        <div class="plan-card">
-          <span class="plan-card-label">{{ referenceBillLabel }}</span>
-          <span class="plan-card-val">{{ referenceBillDisplay }}</span>
-        </div>
-        <div class="plan-card plan-card--solar">
-          <span class="plan-card-label">Escenario con solar</span>
-          <span class="plan-card-val">{{ solarBillDisplay }}</span>
-          <span class="plan-card-hint">Valor referencial sujeto a evaluación técnica.</span>
-        </div>
-      </div>
-
-      <div v-if="compareBar.hasData" class="plan-bar-wrap" aria-hidden="true">
-        <div class="plan-bar-total">
-          <div class="plan-bar-new" :style="{ width: compareBar.newPct + '%' }" />
-          <div class="plan-bar-save" :style="{ width: compareBar.savingsPct + '%' }" />
-        </div>
-        <div class="plan-bar-legend">
-          <span><span class="dot dot--new" aria-hidden="true" /> Nueva boleta ({{ compareBar.newPct }}%)</span>
-          <span><span class="dot dot--save" aria-hidden="true" /> Ahorro ({{ compareBar.savingsPct }}%)</span>
-        </div>
-      </div>
-      <p v-else class="plan-bar-fallback">Comparación visual cuando haya datos de boleta de referencia y escenario solar.</p>
-    </section>
-
-    <div v-if="systemTeaser && !narrativeBillFormatted" class="plan-system animate" style="animation-delay: 0.14s">
-      {{ systemTeaser }}
+        <p class="plan-backup-foot">{{ narration.backupFootDisclaimer }}</p>
+      </section>
     </div>
 
     <div class="plan-badges animate" style="animation-delay: 0.16s">
@@ -369,16 +541,40 @@ const waHref = computed(() => {
       <a href="mailto:info@solutimp.cl">info@solutimp.cl</a>
     </p>
 
-    <div class="plan-wa-desktop animate" style="animation-delay: 0.2s">
-      <a class="wa-btn" :href="waHref" target="_blank" rel="noopener noreferrer">{{ narration.ctaLabel }}</a>
+    <div class="plan-cta-row animate" style="animation-delay: 0.2s">
+      <button
+        type="button"
+        class="plan-primary-cta"
+        :aria-expanded="showContactForm"
+        aria-controls="calc-contact-panel"
+        @click="revealContactForm"
+      >
+        {{ narration.formRevealCtaLabel }}
+      </button>
+      <div class="plan-wa-desktop">
+        <a
+          class="wa-btn wa-btn--secondary"
+          :href="waHref"
+          target="_blank"
+          rel="noopener noreferrer"
+          >{{ narration.whatsappButtonLabel }}</a
+        >
+      </div>
     </div>
 
-    <div class="plan-form animate" style="animation-delay: 0.22s">
+    <div
+      v-if="showContactForm"
+      id="calc-contact-panel"
+      class="plan-form animate"
+      style="animation-delay: 0.22s"
+    >
       <CalcContactBlock />
     </div>
 
     <div class="wa-sticky hidden-md-up" role="region" aria-label="Contacto WhatsApp">
-      <a class="wa-sticky-btn" :href="waHref" target="_blank" rel="noopener noreferrer">{{ narration.ctaLabel }}</a>
+      <a class="wa-sticky-btn wa-sticky-btn--secondary" :href="waHref" target="_blank" rel="noopener noreferrer">{{
+        narration.whatsappButtonLabel
+      }}</a>
     </div>
   </div>
 </template>
@@ -395,8 +591,10 @@ const waHref = computed(() => {
   border-radius: var(--se-radius-lg);
 }
 
-.plan-wa-desktop {
-  display: none;
+.plan-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
 @media (min-width: 768px) {
@@ -409,9 +607,24 @@ const waHref = computed(() => {
     display: none !important;
   }
 
+  .plan-cta-row {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .plan-primary-cta {
+    flex: 1.15;
+  }
+
   .plan-wa-desktop {
-    display: block;
-    margin-bottom: 1rem;
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+
+  .plan-wa-desktop .wa-btn {
+    margin-bottom: 0;
   }
 
   .plan-form {
@@ -423,6 +636,155 @@ const waHref = computed(() => {
   .plan-form {
     padding-bottom: 0.5rem;
   }
+}
+
+.plan-slot {
+  width: 100%;
+  min-width: 0;
+}
+
+.plan-systems-heading {
+  margin: 0.85rem 0 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #7dd3fc;
+}
+
+.plan-coverage-title,
+.plan-sistema-title {
+  margin: 0 0 0.65rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.plan-coverage {
+  padding: 1.1rem 1rem 1.05rem;
+  border-radius: var(--se-radius-md);
+  background: var(--plan-surface);
+  border: 1px solid rgba(94, 234, 212, 0.35);
+}
+
+.plan-sistema {
+  text-align: center;
+  padding: 1rem 0.85rem 1.1rem;
+  border-radius: var(--se-radius-md);
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--plan-border);
+}
+
+.plan-sistema-lead {
+  margin: 0 0 0.75rem;
+  font-size: 0.88rem;
+  color: #b8c5d9;
+  line-height: 1.5;
+}
+
+.plan-autonomy {
+  text-align: center;
+}
+
+.plan-autonomy--hero {
+  padding: 1rem 0.85rem 1.1rem;
+  border-radius: var(--se-radius-md);
+  background: linear-gradient(145deg, rgba(94, 234, 212, 0.1) 0%, rgba(0, 0, 0, 0.15) 60%);
+  border: 1px solid rgba(94, 234, 212, 0.35);
+}
+
+.plan-autonomy-kpi {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #7dd3fc;
+}
+
+.plan-autonomy-range {
+  margin: 0;
+  font-size: clamp(1.35rem, 5vw, 1.85rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #5eead4;
+  line-height: 1.2;
+}
+
+.plan-autonomy-scope {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #cbd5e1;
+  letter-spacing: normal;
+}
+
+.plan-autonomy-disclaimer {
+  margin: 0.75rem 0 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: #8899af;
+}
+
+.plan-kpi--secondary .plan-kpi-value {
+  font-size: clamp(2rem, 8vw, 2.75rem);
+}
+
+.plan-kpi--secondary {
+  opacity: 0.95;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.plan-backup--subtle {
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+  background: var(--plan-surface);
+  padding-top: 0.95rem;
+  padding-bottom: 0.95rem;
+}
+
+.plan-backup--subtle::before {
+  display: none;
+}
+
+.plan-cta-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin: 1rem 0 0.75rem;
+}
+
+.plan-primary-cta {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.95rem 1rem;
+  border-radius: var(--se-radius-md);
+  border: none;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #0d1f35;
+  background: linear-gradient(135deg, #5eead4 0%, #38bdf8 100%);
+}
+
+.plan-primary-cta:focus {
+  outline: 2px solid #e0f2fe;
+  outline-offset: 2px;
+}
+
+.plan-primary-cta:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.plan-primary-cta:focus-visible {
+  outline: 2px solid #e0f2fe;
+  outline-offset: 2px;
+}
+
+.plan-wa-desktop {
+  display: block;
 }
 
 .plan-head {
@@ -916,6 +1278,19 @@ const waHref = computed(() => {
   color: #fff !important;
 }
 
+.wa-btn--secondary {
+  font-weight: 600;
+  font-size: 0.92rem;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  color: #a5f3fc !important;
+  border: 1px solid rgba(94, 234, 212, 0.45);
+}
+
+.wa-btn--secondary:hover {
+  background: rgba(94, 234, 212, 0.08);
+}
+
 .wa-sticky {
   position: fixed;
   left: 0;
@@ -942,6 +1317,14 @@ const waHref = computed(() => {
   font-size: 1rem;
   background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
   color: #fff !important;
+}
+
+.wa-sticky-btn--secondary {
+  font-weight: 600;
+  font-size: 0.92rem;
+  background: rgba(37, 211, 102, 0.2);
+  border: 1px solid rgba(37, 211, 102, 0.55);
+  color: #ecfdf5 !important;
 }
 
 .animate {

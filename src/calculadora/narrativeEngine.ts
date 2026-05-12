@@ -2,6 +2,12 @@ import type { CalcMainGoal, CalcPropertyType } from '@/composables/useCalculador
 
 export type PrimaryKpiMode = 'savings' | 'continuity' | 'coverage'
 
+export type ReferentialAutonomyBand = {
+  hoursMin: number
+  hoursMax: number
+  scopeLine: string
+}
+
 export type EnergyNarrativeInput = {
   propertyType: CalcPropertyType
   mainGoal: CalcMainGoal
@@ -24,9 +30,15 @@ export type EnergyNarrativeContext = {
   loadingSubcopy: string
   loadingMessages: readonly string[]
   whatsappIntentLine: string
-  ctaLabel: string
+  formRevealCtaLabel: string
+  whatsappButtonLabel: string
   planDisclaimer: string
+  referentialAutonomy: ReferentialAutonomyBand | null
 }
+
+/** Texto fijo bajo el rango de autonomía referencial (no horas exactas). */
+export const AUTONOMY_RANGE_DISCLAIMER =
+  'Rango sujeto a batería, consumo real y configuración final.'
 
 const LOADING_RESIDENTIAL: readonly string[] = [
   'Analizando radiación solar estimada…',
@@ -73,6 +85,10 @@ const CHIPS_INDUSTRIAL = ['Accesos', 'CCTV', 'Iluminación crítica', 'Equipos e
 const CHIPS_AGRI = ['Bombas', 'Portón', 'Iluminación', 'Internet', 'Seguridad'] as const
 const CHIPS_GENERIC = ['Portón automático', 'CCTV / cámaras', 'Router / WiFi', 'Iluminación crítica'] as const
 
+const WA_BTN = 'Contactar por WhatsApp'
+
+const CTA_SAVINGS = 'Quiero revisar mi ahorro con un especialista'
+
 function isBackupGoal(g: CalcMainGoal): boolean {
   return g === 'respaldo' || g === 'equipos_criticos'
 }
@@ -111,7 +127,7 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
       segmentKey: 'industrial_infrastructure',
       resultTitle: 'Diagnóstico de infraestructura energética',
       resultSubtitle: 'Preevaluación Solutimp Energy',
-      mainClaim: 'Protege la continuidad de tu operación crítica',
+      mainClaim: 'Tu operación crítica sigue funcionando',
       primaryKpiLabel: 'Ahorro mensual referencial',
       primaryKpiMode: 'continuity',
       backupTitle: 'Respaldo para infraestructura crítica',
@@ -123,9 +139,11 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
       loadingHeadline: 'Analizando infraestructura crítica',
       loadingSubcopy: 'Estamos preparando una preevaluación para ahorro, respaldo y continuidad operativa.',
       loadingMessages: LOADING_INDUSTRIAL,
-      whatsappIntentLine: 'Quiero evaluar respaldo energético para mi operación.',
-      ctaLabel: 'Hablar con un especialista energético',
+      whatsappIntentLine: 'Quiero evaluar respaldo energético para mi operación crítica.',
+      formRevealCtaLabel: 'Coordinar diagnóstico de infraestructura',
+      whatsappButtonLabel: WA_BTN,
       planDisclaimer: nonResidentialDisclaimer,
+      referentialAutonomy: { hoursMin: 6, hoursMax: 12, scopeLine: 'para accesos, seguridad y comunicaciones' },
     }
   }
 
@@ -138,9 +156,7 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
           ? 'Plan de continuidad energética para tu comunidad'
           : 'Plan de continuidad energética para tu operación',
         resultSubtitle: 'Preevaluación Solutimp Energy',
-        mainClaim: isCommunity
-          ? 'La comunidad puede seguir operativa durante cortes eléctricos'
-          : 'Tu negocio puede seguir operando durante cortes eléctricos',
+        mainClaim: isCommunity ? 'La comunidad sigue operativa' : 'Tu negocio sigue operando',
         primaryKpiLabel: 'Ahorro mensual referencial',
         primaryKpiMode: 'continuity',
         backupTitle: isCommunity ? 'Continuidad para espacios comunes' : 'Continuidad operacional Solutimp',
@@ -160,8 +176,14 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
         whatsappIntentLine: isCommunity
           ? 'Mi prioridad es mantener operativas las áreas comunes ante cortes eléctricos.'
           : 'Mi prioridad es mantener operativo mi negocio ante cortes eléctricos.',
-        ctaLabel: 'Hablar con un especialista energético',
+        formRevealCtaLabel: isCommunity
+          ? 'Solicitar evaluación de continuidad comunal'
+          : 'Solicitar evaluación operacional',
+        whatsappButtonLabel: WA_BTN,
         planDisclaimer: nonResidentialDisclaimer,
+        referentialAutonomy: isCommunity
+          ? { hoursMin: 6, hoursMax: 10, scopeLine: 'para accesos, CCTV e iluminación común' }
+          : { hoursMin: 4, hoursMax: 8, scopeLine: 'para operación crítica básica' },
       }
     }
     if (pt === 'empresa' && isSavingsLeanGoal(mg, pt)) {
@@ -181,9 +203,11 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
         loadingHeadline: 'Tu negocio sigue funcionando',
         loadingSubcopy: 'Estamos preparando una preevaluación de ahorro, respaldo y continuidad energética.',
         loadingMessages: LOADING_COMMERCIAL,
-        whatsappIntentLine: 'Quiero revisar el ahorro estimado y una propuesta solar para mi negocio.',
-        ctaLabel: 'Hablar con un especialista energético',
+        whatsappIntentLine: 'Quiero revisar el ahorro estimado y una propuesta solar.',
+        formRevealCtaLabel: CTA_SAVINGS,
+        whatsappButtonLabel: WA_BTN,
         planDisclaimer: nonResidentialDisclaimer,
+        referentialAutonomy: null,
       }
     }
     if (pt === 'condominio' && isSavingsLeanGoal(mg, pt)) {
@@ -203,9 +227,11 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
         loadingHeadline: 'La comunidad sigue operativa',
         loadingSubcopy: 'Estamos preparando una preevaluación de ahorro, respaldo y continuidad energética.',
         loadingMessages: LOADING_COMMUNITY,
-        whatsappIntentLine: 'Quiero revisar el ahorro estimado y una propuesta solar para nuestro condominio.',
-        ctaLabel: 'Hablar con un especialista energético',
+        whatsappIntentLine: 'Quiero revisar el ahorro estimado y una propuesta solar.',
+        formRevealCtaLabel: CTA_SAVINGS,
+        whatsappButtonLabel: WA_BTN,
         planDisclaimer: nonResidentialDisclaimer,
+        referentialAutonomy: null,
       }
     }
   }
@@ -215,9 +241,9 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
       segmentKey: 'agricultural_autonomy',
       resultTitle: 'Plan de autonomía energética',
       resultSubtitle: 'Preevaluación Solutimp Energy',
-      mainClaim: 'Más autonomía para zonas con suministro inestable',
+      mainClaim: 'Tu propiedad gana autonomía energética',
       primaryKpiLabel: 'Ahorro mensual referencial',
-      primaryKpiMode: 'continuity',
+      primaryKpiMode: 'coverage',
       backupTitle: 'Respaldo para campo y parcela',
       backupCopy:
         'Solutimp Energy puede evaluar continuidad referencial para bombas, accesos, iluminación y conectividad.',
@@ -227,9 +253,11 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
       loadingHeadline: 'Tu operación en campo sigue funcionando',
       loadingSubcopy: 'Estamos preparando una preevaluación para ahorro, respaldo y autonomía referencial.',
       loadingMessages: LOADING_AGRI,
-      whatsappIntentLine: 'Mi prioridad es autonomía y respaldo en mi parcela o campo.',
-      ctaLabel: 'Hablar con un especialista energético',
+      whatsappIntentLine: 'Quiero evaluar autonomía energética para mi propiedad.',
+      formRevealCtaLabel: 'Evaluar autonomía energética',
+      whatsappButtonLabel: WA_BTN,
       planDisclaimer: residentialDisclaimer,
+      referentialAutonomy: { hoursMin: 8, hoursMax: 16, scopeLine: 'para cargas esenciales rurales' },
     }
   }
 
@@ -251,8 +279,10 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
       loadingSubcopy: 'Estamos preparando una preevaluación de ahorro, respaldo y continuidad energética.',
       loadingMessages: LOADING_RESIDENTIAL,
       whatsappIntentLine: 'Mi prioridad es mantener funcionando mi hogar ante cortes.',
-      ctaLabel: 'Hablar con un especialista energético',
+      formRevealCtaLabel: 'Quiero validar el respaldo de mi hogar',
+      whatsappButtonLabel: WA_BTN,
       planDisclaimer: residentialDisclaimer,
+      referentialAutonomy: { hoursMin: 8, hoursMax: 14, scopeLine: 'para cargas esenciales del hogar' },
     }
   }
 
@@ -274,8 +304,10 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
       loadingSubcopy: 'Estamos preparando una preevaluación de ahorro, respaldo y continuidad energética.',
       loadingMessages: LOADING_RESIDENTIAL,
       whatsappIntentLine: 'Quiero revisar el ahorro estimado y una propuesta solar.',
-      ctaLabel: 'Hablar con un especialista energético',
+      formRevealCtaLabel: CTA_SAVINGS,
+      whatsappButtonLabel: WA_BTN,
       planDisclaimer: residentialDisclaimer,
+      referentialAutonomy: null,
     }
   }
 
@@ -296,8 +328,10 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
     loadingSubcopy: 'Estamos preparando una preevaluación de ahorro, respaldo y continuidad energética.',
     loadingMessages: LOADING_RESIDENTIAL,
     whatsappIntentLine: 'Quiero revisar el ahorro estimado y una propuesta solar.',
-    ctaLabel: 'Hablar con un especialista energético',
+    formRevealCtaLabel: 'Solicitar evaluación técnica',
+    whatsappButtonLabel: WA_BTN,
     planDisclaimer: residentialDisclaimer,
+    referentialAutonomy: null,
   }
 }
 
