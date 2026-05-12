@@ -6,9 +6,9 @@ function concatNonResidentialCopy(c: ReturnType<typeof getEnergyNarrativeContext
 }
 
 describe('getEnergyNarrativeContext', () => {
-  it('bodega + respaldo → industrial', () => {
+  it('bodega + respaldo → industrial_continuity', () => {
     const c = getEnergyNarrativeContext({ propertyType: 'bodega', mainGoal: 'respaldo' })
-    expect(c.segmentKey).toBe('industrial_infrastructure')
+    expect(c.segmentKey).toBe('industrial_continuity')
     expect(c.primaryKpiMode).toBe('continuity')
     expect(c.loadingHeadline).toContain('infraestructura')
     expect(c.whatsappIntentLine).toMatch(/operación crítica/i)
@@ -20,9 +20,9 @@ describe('getEnergyNarrativeContext', () => {
     expect(c.formRevealCtaLabel).toBe('Coordinar diagnóstico de infraestructura')
   })
 
-  it('empresa + respaldo → commercial continuity', () => {
+  it('empresa + respaldo → operational_business', () => {
     const c = getEnergyNarrativeContext({ propertyType: 'empresa', mainGoal: 'respaldo' })
-    expect(c.segmentKey).toBe('commercial_continuity')
+    expect(c.segmentKey).toBe('operational_business')
     expect(c.loadingMessages[0]).toMatch(/continuidad/i)
     expect(c.mainClaim).toMatch(/negocio/i)
     expect(c.referentialAutonomy).toEqual({
@@ -34,26 +34,26 @@ describe('getEnergyNarrativeContext', () => {
     expect(concatNonResidentialCopy(c).toLowerCase()).not.toContain('hogar')
   })
 
-  it('casa + ahorro → residential savings', () => {
+  it('casa + ahorro → savings_residential', () => {
     const c = getEnergyNarrativeContext({ propertyType: 'casa', mainGoal: 'ahorro' })
-    expect(c.segmentKey).toBe('residential_savings')
+    expect(c.segmentKey).toBe('savings_residential')
     expect(c.primaryKpiMode).toBe('savings')
     expect(c.loadingHeadline).toMatch(/hogar/i)
     expect(c.referentialAutonomy).toBeNull()
     expect(c.formRevealCtaLabel).toContain('ahorro')
   })
 
-  it('casa + respaldo → residential backup con autonomía 8–14 h', () => {
+  it('casa + respaldo → backup_residential con autonomía 8–14 h', () => {
     const c = getEnergyNarrativeContext({ propertyType: 'casa', mainGoal: 'respaldo' })
-    expect(c.segmentKey).toBe('residential_backup')
+    expect(c.segmentKey).toBe('backup_residential')
     expect(c.referentialAutonomy?.hoursMin).toBe(8)
     expect(c.referentialAutonomy?.hoursMax).toBe(14)
     expect(c.formRevealCtaLabel).toBe('Quiero validar el respaldo de mi hogar')
   })
 
-  it('parcela + equipos → coverage y autonomía rural', () => {
+  it('parcela + equipos → backup_rural', () => {
     const c = getEnergyNarrativeContext({ propertyType: 'parcela', mainGoal: 'equipos_criticos' })
-    expect(c.segmentKey).toBe('agricultural_autonomy')
+    expect(c.segmentKey).toBe('backup_rural')
     expect(c.primaryKpiMode).toBe('coverage')
     expect(c.protectedLoadChips).toContain('Bombas')
     expect(c.referentialAutonomy).toEqual({
@@ -64,9 +64,9 @@ describe('getEnergyNarrativeContext', () => {
     expect(c.formRevealCtaLabel).toBe('Evaluar autonomía energética')
   })
 
-  it('condominio + respaldo → autonomía comunal 6–10 h', () => {
+  it('condominio + respaldo → condominium_backup', () => {
     const c = getEnergyNarrativeContext({ propertyType: 'condominio', mainGoal: 'respaldo' })
-    expect(c.segmentKey).toBe('community_continuity')
+    expect(c.segmentKey).toBe('condominium_backup')
     expect(c.referentialAutonomy).toEqual({
       hoursMin: 6,
       hoursMax: 10,

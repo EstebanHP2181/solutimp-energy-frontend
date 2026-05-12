@@ -1,4 +1,5 @@
 import type { CalcMainGoal, CalcPropertyType } from '@/composables/useCalculadoraFlow'
+import { resolveNarrativeSegment, type NarrativeSegmentKey } from '@/calculadora/semanticDecisionEngine'
 
 export type PrimaryKpiMode = 'savings' | 'continuity' | 'coverage'
 
@@ -84,6 +85,40 @@ const LOADING_COMMUNITY: readonly string[] = [
   'Generando preevaluación energética…',
 ]
 
+const LOADING_EXPORT_RESIDENTIAL: readonly string[] = [
+  'Analizando potencial de generación solar estimada…',
+  'Evaluando capacidad de autoconsumo y excedentes…',
+  'Estimando superficie disponible en techumbre…',
+  'Estimando generación solar referencial…',
+  'Generando preevaluación energética…',
+]
+
+const LOADING_EXPORT_RURAL: readonly string[] = [
+  'Analizando potencial de generación en parcela…',
+  'Evaluando superficie disponible para paneles…',
+  'Estimando generación solar referencial…',
+  'Evaluando autoconsumo y excedentes referenciales…',
+  'Generando preevaluación energética…',
+]
+
+const LOADING_EXPORT_BUSINESS: readonly string[] = [
+  'Evaluando cubierta útil para instalación solar…',
+  'Analizando potencial de generación distribuida…',
+  'Estimando generación y excedentes referenciales…',
+  'Evaluando opciones de autoconsumo comercial…',
+  'Generando preevaluación energética…',
+]
+
+const LOADING_SAVINGS_RURAL: readonly string[] = [
+  'Analizando radiación solar estimada…',
+  'Evaluando superficie disponible para paneles…',
+  'Estimando demanda en campo y parcela…',
+  'Optimizando escenario solar referencial…',
+  'Generando preevaluación energética…',
+]
+
+const CHIPS_EXPORT = ['Autoconsumo referencial', 'Excedentes y medición', 'Superficie para paneles', 'Visita técnica'] as const
+
 const CHIPS_RESIDENTIAL = ['Portón automático', 'CCTV / cámaras', 'Router / WiFi', 'Iluminación crítica'] as const
 const CHIPS_COMMERCIAL = ['Refrigeración', 'POS / caja', 'CCTV / cámaras', 'Internet', 'Iluminación esencial'] as const
 const CHIPS_INDUSTRIAL = ['Accesos', 'CCTV', 'Iluminación crítica', 'Equipos esenciales', 'Comunicaciones'] as const
@@ -94,18 +129,6 @@ const WA_BTN = 'Contactar por WhatsApp'
 
 const CTA_SAVINGS = 'Quiero revisar mi ahorro con un especialista'
 
-function isBackupGoal(g: CalcMainGoal): boolean {
-  return g === 'respaldo' || g === 'equipos_criticos'
-}
-
-function isSavingsLeanGoal(g: CalcMainGoal, pt?: CalcPropertyType): boolean {
-  if (g === 'ahorro' || g === 'vender_excedente' || g === '') return true
-  if (pt === 'empresa' || pt === 'condominio') {
-    if (g === 'empresa') return true
-  }
-  return false
-}
-
 function pickChips(
   base: readonly string[],
   selectedCriticalLoads: string[] | undefined
@@ -114,86 +137,173 @@ function pickChips(
   return base
 }
 
+function chipsForSegment(seg: NarrativeSegmentKey, selectedCriticalLoads: string[] | undefined): readonly string[] {
+  switch (seg) {
+    case 'export_residential':
+    case 'export_rural':
+    case 'export_business':
+      return pickChips(CHIPS_EXPORT, selectedCriticalLoads)
+    case 'savings_residential':
+    case 'backup_residential':
+      return pickChips(CHIPS_RESIDENTIAL, selectedCriticalLoads)
+    case 'savings_rural':
+    case 'backup_rural':
+      return pickChips(CHIPS_AGRI, selectedCriticalLoads)
+    case 'savings_business':
+    case 'operational_business':
+    case 'protection_business':
+    case 'condominium_efficiency':
+    case 'condominium_backup':
+      return pickChips(CHIPS_COMMERCIAL, selectedCriticalLoads)
+    case 'industrial_continuity':
+    case 'industrial_savings':
+      return pickChips(CHIPS_INDUSTRIAL, selectedCriticalLoads)
+    default:
+      return pickChips(CHIPS_GENERIC, selectedCriticalLoads)
+  }
+}
+
 const FOOT_REF =
   'La autonomía referencial depende de batería, consumo real y configuración final. Es una preevaluación sujeta a visita técnica.'
 
 export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNarrativeContext {
   const { propertyType, mainGoal, selectedCriticalLoads } = input
-  const pt = propertyType || ''
-  const mg = mainGoal || ''
+  const chips = chipsForSegment(resolveNarrativeSegment(input), selectedCriticalLoads)
 
   const residentialDisclaimer =
     'Preevaluación referencial. Un especialista Solutimp puede validar tu techo, consumo real y respaldo ideal.'
   const nonResidentialDisclaimer =
     'Preevaluación referencial. Un especialista Solutimp puede validar tu instalación, consumo real y respaldo ideal.'
+  const ruralParcelDisclaimer =
+    'Preevaluación referencial. Un especialista Solutimp puede validar tu cubierta o estructura, consumo real y escenario solar.'
 
-  if (pt === 'bodega') {
-    return {
-      segmentKey: 'industrial_infrastructure',
-      resultTitle: 'Diagnóstico de infraestructura energética',
-      resultSubtitle: 'Preevaluación Solutimp Energy',
-      mainClaim: 'Tu operación crítica sigue funcionando',
-      primaryKpiLabel: 'Ahorro mensual referencial',
-      primaryKpiMode: 'continuity',
-      backupTitle: 'Respaldo para infraestructura crítica',
-      backupCopy:
-        'Solutimp Energy puede evaluar una solución para mantener activos accesos, seguridad, iluminación y cargas esenciales.',
-      backupFootDisclaimer: FOOT_REF,
-      protectedLoadChips: pickChips(CHIPS_INDUSTRIAL, selectedCriticalLoads),
-      narrativeConsumptionHint: 'Estimamos una demanda operativa acorde a tu tipo de instalación.',
-      loadingHeadline: 'Analizando infraestructura crítica',
-      loadingSubcopy: 'Estamos preparando una preevaluación para ahorro, respaldo y continuidad operativa.',
-      loadingMessages: LOADING_INDUSTRIAL,
-      whatsappIntentLine: 'Quiero evaluar respaldo energético para mi operación crítica.',
-      formRevealCtaLabel: 'Coordinar diagnóstico de infraestructura',
-      whatsappButtonLabel: WA_BTN,
-      planDisclaimer: nonResidentialDisclaimer,
-      referentialAutonomy: { hoursMin: 6, hoursMax: 12, scopeLine: 'para accesos, seguridad y comunicaciones' },
-    }
-  }
+  const seg = resolveNarrativeSegment({ propertyType, mainGoal })
 
-  if (pt === 'empresa' || pt === 'condominio') {
-    if (isBackupGoal(mg)) {
-      const isCommunity = pt === 'condominio'
+  switch (seg) {
+    case 'export_residential':
       return {
-        segmentKey: isCommunity ? 'community_continuity' : 'commercial_continuity',
-        resultTitle: isCommunity
-          ? 'Plan de continuidad energética para tu comunidad'
-          : 'Plan de continuidad energética para tu operación',
-        resultSubtitle: 'Preevaluación Solutimp Energy',
-        mainClaim: isCommunity ? 'La comunidad sigue operativa' : 'Tu negocio sigue operando',
-        primaryKpiLabel: 'Ahorro mensual referencial',
-        primaryKpiMode: 'continuity',
-        backupTitle: isCommunity ? 'Continuidad para espacios comunes' : 'Continuidad operacional Solutimp',
-        backupCopy: isCommunity
-          ? 'Diseñado para apoyar iluminación común, accesos, conectividad y cargas críticas ante interrupciones de suministro.'
-          : 'Diseñado para proteger refrigeración, conectividad, seguridad y operación básica ante interrupciones de suministro.',
+        segmentKey: seg,
+        resultTitle: 'Tu plan de generación e independencia energética',
+        resultSubtitle: 'Preevaluación · autoconsumo y excedentes',
+        mainClaim: 'Tu hogar podría generar más energía de la que consume en ciertos periodos.',
+        primaryKpiLabel: 'Potencial de generación referencial',
+        primaryKpiMode: 'savings',
+        backupTitle: 'Autoconsumo y excedentes referenciales',
+        backupCopy:
+          'Solutimp Energy puede orientarte en autoconsumo, medición y esquema de excedentes según normativa aplicable (preevaluación).',
         backupFootDisclaimer: FOOT_REF,
-        protectedLoadChips: pickChips(CHIPS_COMMERCIAL, selectedCriticalLoads),
-        narrativeConsumptionHint: isCommunity
-          ? 'Estimamos un perfil de consumo común acorde a la referencia declarada.'
-          : 'Estimamos una curva de demanda acorde a tu operación y referencia declarada.',
-        loadingHeadline: isCommunity ? 'La comunidad sigue operativa' : 'Analizando continuidad operacional',
-        loadingSubcopy: isCommunity
-          ? 'Estamos preparando una preevaluación para ahorro, respaldo y espacios comunes.'
-          : 'Estamos preparando una preevaluación para ahorro, respaldo y operación crítica.',
-        loadingMessages: isCommunity ? LOADING_COMMUNITY : LOADING_COMMERCIAL,
-        whatsappIntentLine: isCommunity
-          ? 'Mi prioridad es mantener operativas las áreas comunes ante cortes eléctricos.'
-          : 'Mi prioridad es mantener operativo mi negocio ante cortes eléctricos.',
-        formRevealCtaLabel: isCommunity
-          ? 'Solicitar evaluación de continuidad comunal'
-          : 'Solicitar evaluación operacional',
+        protectedLoadChips: chips,
+        narrativeConsumptionHint: 'Estimamos un perfil de consumo residencial acorde a la referencia declarada.',
+        loadingHeadline: 'Evaluando potencial de generación solar',
+        loadingSubcopy:
+          'Estamos preparando una preevaluación de autoconsumo, excedentes y net billing referencial.',
+        loadingMessages: LOADING_EXPORT_RESIDENTIAL,
+        whatsappIntentLine: 'Quiero evaluar mi potencial de generación y excedentes solares.',
+        formRevealCtaLabel: 'Quiero evaluar mi potencial solar',
+        whatsappButtonLabel: WA_BTN,
+        planDisclaimer: residentialDisclaimer,
+        referentialAutonomy: null,
+      }
+
+    case 'export_rural':
+      return {
+        segmentKey: seg,
+        resultTitle: 'Plan de generación y excedentes en tu propiedad',
+        resultSubtitle: 'Preevaluación en parcela o campo',
+        mainClaim: 'Tu propiedad podría generar más energía de la que consume en ciertos periodos.',
+        primaryKpiLabel: 'Potencial de generación referencial',
+        primaryKpiMode: 'savings',
+        backupTitle: 'Producción y excedentes en campo',
+        backupCopy:
+          'Solutimp Energy puede orientarte en generación distribuida, medición y valorización referencial de excedentes.',
+        backupFootDisclaimer: FOOT_REF,
+        protectedLoadChips: chips,
+        narrativeConsumptionHint: 'Estimamos un perfil de consumo en parcela/campo acorde a la referencia declarada.',
+        loadingHeadline: 'Evaluando potencial de generación en parcela',
+        loadingSubcopy: 'Estamos preparando una preevaluación de autoconsumo, excedentes y generación referencial.',
+        loadingMessages: LOADING_EXPORT_RURAL,
+        whatsappIntentLine: 'Quiero evaluar autonomía y excedentes solares en mi parcela o campo.',
+        formRevealCtaLabel: 'Evaluar potencial solar en mi propiedad',
+        whatsappButtonLabel: WA_BTN,
+        planDisclaimer: ruralParcelDisclaimer,
+        referentialAutonomy: null,
+      }
+
+    case 'export_business':
+      return {
+        segmentKey: seg,
+        resultTitle: 'Plan de generación y excedentes para tu operación',
+        resultSubtitle: 'Preevaluación Solutimp Energy',
+        mainClaim: 'Tu operación puede valorizar la generación distribuida y excedentes referenciales.',
+        primaryKpiLabel: 'Potencial de generación referencial',
+        primaryKpiMode: 'savings',
+        backupTitle: 'Generación y autoconsumo comercial',
+        backupCopy:
+          'Solutimp Energy puede orientarte en cubierta útil, autoconsumo y esquema de excedentes según perfil operativo (preevaluación).',
+        backupFootDisclaimer: FOOT_REF,
+        protectedLoadChips: chips,
+        narrativeConsumptionHint: 'Estimamos una curva de demanda acorde a tu operación y referencia declarada.',
+        loadingHeadline: 'Evaluando potencial de generación comercial',
+        loadingSubcopy: 'Estamos preparando una preevaluación de generación, excedentes y autoconsumo referencial.',
+        loadingMessages: LOADING_EXPORT_BUSINESS,
+        whatsappIntentLine: 'Quiero evaluar generación y excedentes solares para mi operación.',
+        formRevealCtaLabel: 'Evaluar generación y excedentes',
         whatsappButtonLabel: WA_BTN,
         planDisclaimer: nonResidentialDisclaimer,
-        referentialAutonomy: isCommunity
-          ? { hoursMin: 6, hoursMax: 10, scopeLine: 'para accesos, CCTV e iluminación común' }
-          : { hoursMin: 4, hoursMax: 8, scopeLine: 'para operación crítica básica' },
+        referentialAutonomy: null,
       }
-    }
-    if (pt === 'empresa' && isSavingsLeanGoal(mg, pt)) {
+
+    case 'savings_residential':
       return {
-        segmentKey: 'commercial_savings',
+        segmentKey: seg,
+        resultTitle: 'Tu plan de eficiencia e independencia',
+        resultSubtitle: 'Preevaluación residencial',
+        mainClaim: 'Reduce tu dependencia de la red eléctrica',
+        primaryKpiLabel: 'Podrías dejar de pagar aprox.',
+        primaryKpiMode: 'savings',
+        backupTitle: 'Respaldo inteligente Solutimp',
+        backupCopy:
+          'Además del ahorro, Solutimp Energy puede orientarte en respaldo referencial para cargas críticas.',
+        backupFootDisclaimer: FOOT_REF,
+        protectedLoadChips: chips,
+        narrativeConsumptionHint: 'Estimamos un consumo residencial acorde a ese nivel.',
+        loadingHeadline: 'Tu hogar sigue funcionando',
+        loadingSubcopy: 'Estamos preparando una preevaluación de ahorro, respaldo y continuidad energética.',
+        loadingMessages: LOADING_RESIDENTIAL,
+        whatsappIntentLine: 'Quiero revisar el ahorro estimado y una propuesta solar.',
+        formRevealCtaLabel: CTA_SAVINGS,
+        whatsappButtonLabel: WA_BTN,
+        planDisclaimer: residentialDisclaimer,
+        referentialAutonomy: null,
+      }
+
+    case 'savings_rural':
+      return {
+        segmentKey: seg,
+        resultTitle: 'Tu plan de eficiencia en parcela o campo',
+        resultSubtitle: 'Preevaluación en parcela o campo',
+        mainClaim: 'Reduce tu dependencia de la red con un perfil solar acorde a tu propiedad.',
+        primaryKpiLabel: 'Podrías dejar de pagar aprox.',
+        primaryKpiMode: 'savings',
+        backupTitle: 'Respaldo referencial en propiedad',
+        backupCopy:
+          'Solutimp Energy puede combinar ahorro solar con evaluación de respaldo referencial para cargas clave en campo.',
+        backupFootDisclaimer: FOOT_REF,
+        protectedLoadChips: chips,
+        narrativeConsumptionHint: 'Estimamos un perfil de consumo en parcela/campo acorde a la referencia declarada.',
+        loadingHeadline: 'Evaluando potencial solar en parcela',
+        loadingSubcopy: 'Estamos preparando una preevaluación de ahorro y generación referencial.',
+        loadingMessages: LOADING_SAVINGS_RURAL,
+        whatsappIntentLine: 'Quiero revisar el ahorro estimado y una propuesta solar para mi parcela.',
+        formRevealCtaLabel: CTA_SAVINGS,
+        whatsappButtonLabel: WA_BTN,
+        planDisclaimer: ruralParcelDisclaimer,
+        referentialAutonomy: null,
+      }
+
+    case 'savings_business':
+      return {
+        segmentKey: seg,
         resultTitle: 'Tu plan de eficiencia energética empresarial',
         resultSubtitle: 'Preevaluación Solutimp Energy',
         mainClaim: 'Reduce costos de electricidad en tu operación',
@@ -203,7 +313,7 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
         backupCopy:
           'Solutimp Energy puede complementar el ahorro con evaluación de cargas críticas ante cortes de suministro.',
         backupFootDisclaimer: FOOT_REF,
-        protectedLoadChips: pickChips(CHIPS_COMMERCIAL, selectedCriticalLoads),
+        protectedLoadChips: chips,
         narrativeConsumptionHint: 'Estimamos una demanda acorde a tu operación y referencia declarada.',
         loadingHeadline: 'Tu negocio sigue funcionando',
         loadingSubcopy: 'Estamos preparando una preevaluación de ahorro, respaldo y continuidad energética.',
@@ -214,10 +324,10 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
         planDisclaimer: nonResidentialDisclaimer,
         referentialAutonomy: null,
       }
-    }
-    if (pt === 'condominio' && isSavingsLeanGoal(mg, pt)) {
+
+    case 'condominium_efficiency':
       return {
-        segmentKey: 'community_savings',
+        segmentKey: seg,
         resultTitle: 'Eficiencia energética para tu comunidad',
         resultSubtitle: 'Preevaluación Solutimp Energy',
         mainClaim: 'La comunidad puede reducir costos y sumar respaldo referencial',
@@ -227,7 +337,7 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
         backupCopy:
           'Solutimp Energy puede orientar respaldo referencial para espacios comunes y cargas críticas del condominio.',
         backupFootDisclaimer: FOOT_REF,
-        protectedLoadChips: pickChips(CHIPS_COMMERCIAL, selectedCriticalLoads),
+        protectedLoadChips: chips,
         narrativeConsumptionHint: 'Estimamos un perfil de consumo común acorde a la referencia declarada.',
         loadingHeadline: 'La comunidad sigue operativa',
         loadingSubcopy: 'Estamos preparando una preevaluación de ahorro, respaldo y continuidad energética.',
@@ -238,105 +348,198 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
         planDisclaimer: nonResidentialDisclaimer,
         referentialAutonomy: null,
       }
-    }
-  }
 
-  if (pt === 'parcela' && isBackupGoal(mg)) {
-    return {
-      segmentKey: 'agricultural_autonomy',
-      resultTitle: 'Plan de autonomía energética',
-      resultSubtitle: 'Preevaluación Solutimp Energy',
-      mainClaim: 'Tu propiedad gana autonomía energética',
-      primaryKpiLabel: 'Ahorro mensual referencial',
-      primaryKpiMode: 'coverage',
-      backupTitle: 'Respaldo para campo y parcela',
-      backupCopy:
-        'Solutimp Energy puede evaluar continuidad referencial para bombas, accesos, iluminación y conectividad.',
-      backupFootDisclaimer: FOOT_REF,
-      protectedLoadChips: pickChips(CHIPS_AGRI, selectedCriticalLoads),
-      narrativeConsumptionHint: 'Estimamos un perfil de consumo en parcela/campo acorde a la referencia declarada.',
-      loadingHeadline: 'Tu operación en campo sigue funcionando',
-      loadingSubcopy: 'Estamos preparando una preevaluación para ahorro, respaldo y autonomía referencial.',
-      loadingMessages: LOADING_AGRI,
-      whatsappIntentLine: 'Quiero evaluar autonomía energética para mi propiedad.',
-      formRevealCtaLabel: 'Evaluar autonomía energética',
-      whatsappButtonLabel: WA_BTN,
-      planDisclaimer: residentialDisclaimer,
-      referentialAutonomy: { hoursMin: 8, hoursMax: 16, scopeLine: 'para cargas esenciales rurales' },
-    }
-  }
+    case 'backup_residential':
+      return {
+        segmentKey: seg,
+        resultTitle: 'Tu plan de continuidad y ahorro solar',
+        resultSubtitle: 'Preevaluación Solutimp Energy',
+        mainClaim: 'Tu hogar sigue funcionando',
+        primaryKpiLabel: 'Ahorro mensual referencial',
+        primaryKpiMode: 'continuity',
+        backupTitle: 'Respaldo inteligente para tu hogar',
+        backupCopy:
+          'Solutimp Energy puede ayudarte a mantener operativas tus cargas críticas ante cortes de luz.',
+        backupFootDisclaimer: FOOT_REF,
+        protectedLoadChips: chips,
+        narrativeConsumptionHint: 'Estimamos un consumo residencial acorde a ese nivel.',
+        loadingHeadline: 'Tu hogar sigue funcionando',
+        loadingSubcopy: 'Estamos preparando una preevaluación de ahorro, respaldo y continuidad energética.',
+        loadingMessages: LOADING_RESIDENTIAL,
+        whatsappIntentLine: 'Mi prioridad es mantener funcionando mi hogar ante cortes.',
+        formRevealCtaLabel: 'Quiero validar el respaldo de mi hogar',
+        whatsappButtonLabel: WA_BTN,
+        planDisclaimer: residentialDisclaimer,
+        referentialAutonomy: { hoursMin: 8, hoursMax: 14, scopeLine: 'para cargas esenciales del hogar' },
+      }
 
-  if (pt === 'casa' && isBackupGoal(mg)) {
-    return {
-      segmentKey: 'residential_backup',
-      resultTitle: 'Tu plan de continuidad y ahorro solar',
-      resultSubtitle: 'Preevaluación Solutimp Energy',
-      mainClaim: 'Tu hogar sigue funcionando',
-      primaryKpiLabel: 'Ahorro mensual referencial',
-      primaryKpiMode: 'continuity',
-      backupTitle: 'Respaldo inteligente para tu hogar',
-      backupCopy:
-        'Solutimp Energy puede ayudarte a mantener operativas tus cargas críticas ante cortes de luz.',
-      backupFootDisclaimer: FOOT_REF,
-      protectedLoadChips: pickChips(CHIPS_RESIDENTIAL, selectedCriticalLoads),
-      narrativeConsumptionHint: 'Estimamos un consumo residencial acorde a ese nivel.',
-      loadingHeadline: 'Tu hogar sigue funcionando',
-      loadingSubcopy: 'Estamos preparando una preevaluación de ahorro, respaldo y continuidad energética.',
-      loadingMessages: LOADING_RESIDENTIAL,
-      whatsappIntentLine: 'Mi prioridad es mantener funcionando mi hogar ante cortes.',
-      formRevealCtaLabel: 'Quiero validar el respaldo de mi hogar',
-      whatsappButtonLabel: WA_BTN,
-      planDisclaimer: residentialDisclaimer,
-      referentialAutonomy: { hoursMin: 8, hoursMax: 14, scopeLine: 'para cargas esenciales del hogar' },
-    }
-  }
+    case 'backup_rural':
+      return {
+        segmentKey: seg,
+        resultTitle: 'Plan de autonomía energética',
+        resultSubtitle: 'Preevaluación en parcela o campo',
+        mainClaim: 'Tu propiedad gana autonomía energética',
+        primaryKpiLabel: 'Ahorro mensual referencial',
+        primaryKpiMode: 'coverage',
+        backupTitle: 'Respaldo para campo y parcela',
+        backupCopy:
+          'Solutimp Energy puede evaluar continuidad referencial para bombas, accesos, iluminación y conectividad.',
+        backupFootDisclaimer: FOOT_REF,
+        protectedLoadChips: chips,
+        narrativeConsumptionHint: 'Estimamos un perfil de consumo en parcela/campo acorde a la referencia declarada.',
+        loadingHeadline: 'Tu operación en campo sigue funcionando',
+        loadingSubcopy: 'Estamos preparando una preevaluación para ahorro, respaldo y autonomía referencial.',
+        loadingMessages: LOADING_AGRI,
+        whatsappIntentLine: 'Quiero evaluar autonomía energética para mi propiedad.',
+        formRevealCtaLabel: 'Evaluar autonomía energética',
+        whatsappButtonLabel: WA_BTN,
+        planDisclaimer: ruralParcelDisclaimer,
+        referentialAutonomy: { hoursMin: 8, hoursMax: 16, scopeLine: 'para cargas esenciales rurales' },
+      }
 
-  if ((pt === 'casa' || pt === 'parcela') && isSavingsLeanGoal(mg, pt)) {
-    return {
-      segmentKey: 'residential_savings',
-      resultTitle: 'Tu plan de eficiencia e independencia',
-      resultSubtitle: 'Preevaluación residencial',
-      mainClaim: 'Reduce tu dependencia de la red eléctrica',
-      primaryKpiLabel: 'Podrías dejar de pagar aprox.',
-      primaryKpiMode: 'savings',
-      backupTitle: 'Respaldo inteligente Solutimp',
-      backupCopy:
-        'Además del ahorro, Solutimp Energy puede orientarte en respaldo referencial para cargas críticas.',
-      backupFootDisclaimer: FOOT_REF,
-      protectedLoadChips: pickChips(CHIPS_RESIDENTIAL, selectedCriticalLoads),
-      narrativeConsumptionHint: 'Estimamos un consumo residencial acorde a ese nivel.',
-      loadingHeadline: 'Tu hogar sigue funcionando',
-      loadingSubcopy: 'Estamos preparando una preevaluación de ahorro, respaldo y continuidad energética.',
-      loadingMessages: LOADING_RESIDENTIAL,
-      whatsappIntentLine: 'Quiero revisar el ahorro estimado y una propuesta solar.',
-      formRevealCtaLabel: CTA_SAVINGS,
-      whatsappButtonLabel: WA_BTN,
-      planDisclaimer: residentialDisclaimer,
-      referentialAutonomy: null,
-    }
-  }
+    case 'operational_business':
+      return {
+        segmentKey: seg,
+        resultTitle: 'Plan de continuidad energética para tu operación',
+        resultSubtitle: 'Preevaluación Solutimp Energy',
+        mainClaim: 'Tu negocio sigue operando',
+        primaryKpiLabel: 'Ahorro mensual referencial',
+        primaryKpiMode: 'continuity',
+        backupTitle: 'Continuidad operacional Solutimp',
+        backupCopy:
+          'Diseñado para proteger refrigeración, conectividad, seguridad y operación básica ante interrupciones de suministro.',
+        backupFootDisclaimer: FOOT_REF,
+        protectedLoadChips: chips,
+        narrativeConsumptionHint: 'Estimamos una curva de demanda acorde a tu operación y referencia declarada.',
+        loadingHeadline: 'Analizando continuidad operacional',
+        loadingSubcopy: 'Estamos preparando una preevaluación para ahorro, respaldo y operación crítica.',
+        loadingMessages: LOADING_COMMERCIAL,
+        whatsappIntentLine: 'Mi prioridad es mantener operativo mi negocio ante cortes eléctricos.',
+        formRevealCtaLabel: 'Solicitar evaluación operacional',
+        whatsappButtonLabel: WA_BTN,
+        planDisclaimer: nonResidentialDisclaimer,
+        referentialAutonomy: { hoursMin: 4, hoursMax: 8, scopeLine: 'para operación crítica básica' },
+      }
 
-  return {
-    segmentKey: 'default',
-    resultTitle: 'Tu diagnóstico energético preliminar',
-    resultSubtitle: 'Preevaluación Solutimp Energy',
-    mainClaim: 'Ahorro, respaldo y continuidad energética',
-    primaryKpiLabel: 'Podrías dejar de pagar aprox.',
-    primaryKpiMode: 'savings',
-    backupTitle: 'Respaldo inteligente Solutimp',
-    backupCopy:
-      'Solutimp Energy puede ayudarte a combinar ahorro solar con evaluación de cargas críticas ante cortes.',
-    backupFootDisclaimer: FOOT_REF,
-    protectedLoadChips: pickChips(CHIPS_GENERIC, selectedCriticalLoads),
-    narrativeConsumptionHint: 'Estimamos un perfil de consumo acorde a la referencia declarada.',
-    loadingHeadline: 'Tu hogar sigue funcionando',
-    loadingSubcopy: 'Estamos preparando una preevaluación de ahorro, respaldo y continuidad energética.',
-    loadingMessages: LOADING_RESIDENTIAL,
-    whatsappIntentLine: 'Quiero revisar el ahorro estimado y una propuesta solar.',
-    formRevealCtaLabel: 'Solicitar evaluación técnica',
-    whatsappButtonLabel: WA_BTN,
-    planDisclaimer: residentialDisclaimer,
-    referentialAutonomy: null,
+    case 'protection_business':
+      return {
+        segmentKey: seg,
+        resultTitle: 'Plan de continuidad energética para tu operación',
+        resultSubtitle: 'Preevaluación Solutimp Energy',
+        mainClaim: 'Tu negocio sigue operando',
+        primaryKpiLabel: 'Ahorro mensual referencial',
+        primaryKpiMode: 'continuity',
+        backupTitle: 'Resiliencia para equipos y operación',
+        backupCopy:
+          'Solutimp Energy puede evaluar continuidad referencial orientada a equipos sensibles y cargas críticas del negocio.',
+        backupFootDisclaimer: FOOT_REF,
+        protectedLoadChips: chips,
+        narrativeConsumptionHint: 'Estimamos una curva de demanda acorde a tu operación y referencia declarada.',
+        loadingHeadline: 'Analizando continuidad operacional',
+        loadingSubcopy: 'Estamos preparando una preevaluación para protección de equipos y operación crítica.',
+        loadingMessages: LOADING_COMMERCIAL,
+        whatsappIntentLine: 'Mi prioridad es proteger equipos críticos de mi operación ante cortes.',
+        formRevealCtaLabel: 'Solicitar evaluación operacional',
+        whatsappButtonLabel: WA_BTN,
+        planDisclaimer: nonResidentialDisclaimer,
+        referentialAutonomy: { hoursMin: 4, hoursMax: 8, scopeLine: 'para operación crítica básica' },
+      }
+
+    case 'condominium_backup':
+      return {
+        segmentKey: seg,
+        resultTitle: 'Plan de continuidad energética para tu comunidad',
+        resultSubtitle: 'Preevaluación Solutimp Energy',
+        mainClaim: 'La comunidad sigue operativa',
+        primaryKpiLabel: 'Ahorro mensual referencial',
+        primaryKpiMode: 'continuity',
+        backupTitle: 'Continuidad para espacios comunes',
+        backupCopy:
+          'Diseñado para apoyar iluminación común, accesos, conectividad y cargas críticas ante interrupciones de suministro.',
+        backupFootDisclaimer: FOOT_REF,
+        protectedLoadChips: chips,
+        narrativeConsumptionHint: 'Estimamos un perfil de consumo común acorde a la referencia declarada.',
+        loadingHeadline: 'La comunidad sigue operativa',
+        loadingSubcopy: 'Estamos preparando una preevaluación para ahorro, respaldo y espacios comunes.',
+        loadingMessages: LOADING_COMMUNITY,
+        whatsappIntentLine: 'Mi prioridad es mantener operativas las áreas comunes ante cortes eléctricos.',
+        formRevealCtaLabel: 'Solicitar evaluación de continuidad comunal',
+        whatsappButtonLabel: WA_BTN,
+        planDisclaimer: nonResidentialDisclaimer,
+        referentialAutonomy: { hoursMin: 6, hoursMax: 10, scopeLine: 'para accesos, CCTV e iluminación común' },
+      }
+
+    case 'industrial_continuity':
+      return {
+        segmentKey: seg,
+        resultTitle: 'Diagnóstico de infraestructura energética',
+        resultSubtitle: 'Preevaluación Solutimp Energy',
+        mainClaim: 'Tu operación crítica sigue funcionando',
+        primaryKpiLabel: 'Ahorro mensual referencial',
+        primaryKpiMode: 'continuity',
+        backupTitle: 'Respaldo para infraestructura crítica',
+        backupCopy:
+          'Solutimp Energy puede evaluar una solución para mantener activos accesos, seguridad, iluminación y cargas esenciales.',
+        backupFootDisclaimer: FOOT_REF,
+        protectedLoadChips: chips,
+        narrativeConsumptionHint: 'Estimamos una demanda operativa acorde a tu tipo de instalación.',
+        loadingHeadline: 'Analizando infraestructura crítica',
+        loadingSubcopy: 'Estamos preparando una preevaluación para ahorro, respaldo y continuidad operativa.',
+        loadingMessages: LOADING_INDUSTRIAL,
+        whatsappIntentLine: 'Quiero evaluar respaldo energético para mi operación crítica.',
+        formRevealCtaLabel: 'Coordinar diagnóstico de infraestructura',
+        whatsappButtonLabel: WA_BTN,
+        planDisclaimer: nonResidentialDisclaimer,
+        referentialAutonomy: { hoursMin: 6, hoursMax: 12, scopeLine: 'para accesos, seguridad y comunicaciones' },
+      }
+
+    case 'industrial_savings':
+      return {
+        segmentKey: seg,
+        resultTitle: 'Eficiencia energética en instalación industrial',
+        resultSubtitle: 'Preevaluación Solutimp Energy',
+        mainClaim: 'Reduce costos de electricidad en tu operación',
+        primaryKpiLabel: 'Podrías dejar de pagar aprox.',
+        primaryKpiMode: 'savings',
+        backupTitle: 'Respaldo referencial industrial',
+        backupCopy:
+          'Solutimp Energy puede complementar el ahorro con evaluación de continuidad referencial en cargas clave.',
+        backupFootDisclaimer: FOOT_REF,
+        protectedLoadChips: chips,
+        narrativeConsumptionHint: 'Estimamos una demanda operativa acorde a tu tipo de instalación.',
+        loadingHeadline: 'Analizando infraestructura crítica',
+        loadingSubcopy: 'Estamos preparando una preevaluación de ahorro y escenario solar referencial.',
+        loadingMessages: LOADING_INDUSTRIAL,
+        whatsappIntentLine: 'Quiero revisar el ahorro estimado y una propuesta solar para mi instalación.',
+        formRevealCtaLabel: 'Quiero revisar mi ahorro con un especialista',
+        whatsappButtonLabel: WA_BTN,
+        planDisclaimer: nonResidentialDisclaimer,
+        referentialAutonomy: null,
+      }
+
+    default:
+      return {
+        segmentKey: 'default',
+        resultTitle: 'Tu diagnóstico energético preliminar',
+        resultSubtitle: 'Preevaluación Solutimp Energy',
+        mainClaim: 'Ahorro, respaldo y continuidad energética',
+        primaryKpiLabel: 'Podrías dejar de pagar aprox.',
+        primaryKpiMode: 'savings',
+        backupTitle: 'Respaldo inteligente Solutimp',
+        backupCopy:
+          'Solutimp Energy puede ayudarte a combinar ahorro solar con evaluación de cargas críticas ante cortes.',
+        backupFootDisclaimer: FOOT_REF,
+        protectedLoadChips: chips,
+        narrativeConsumptionHint: 'Estimamos un perfil de consumo acorde a la referencia declarada.',
+        loadingHeadline: 'Tu hogar sigue funcionando',
+        loadingSubcopy: 'Estamos preparando una preevaluación de ahorro, respaldo y continuidad energética.',
+        loadingMessages: LOADING_RESIDENTIAL,
+        whatsappIntentLine: 'Quiero revisar el ahorro estimado y una propuesta solar.',
+        formRevealCtaLabel: 'Solicitar evaluación técnica',
+        whatsappButtonLabel: WA_BTN,
+        planDisclaimer: residentialDisclaimer,
+        referentialAutonomy: null,
+      }
   }
 }
 
