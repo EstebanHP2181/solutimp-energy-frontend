@@ -2,6 +2,7 @@
 import { computed, inject } from 'vue'
 import { wizardInjectionKey } from '@/composables/useWizard'
 import { formatCLP } from '@/shared/formatCLP'
+import { buildWhatsAppLink } from '@/shared/whatsapp'
 
 const w = inject(wizardInjectionKey)!
 
@@ -15,10 +16,9 @@ const econ = computed(() => sim.value?.economics)
 
 const waHref = computed(() => {
   const who = firstName()
-  const msg = encodeURIComponent(
+  return buildWhatsAppLink(
     `Hola, soy ${who}. Completé la evaluación SOLUTIMP ENERGY y quiero conversar sobre mi propuesta.`
   )
-  return `https://wa.me/56222013315?text=${msg}`
 })
 
 const savingsLine = computed(() => {

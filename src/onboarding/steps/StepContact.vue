@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue'
 import { submitEnergyLead } from '@/api/energyLeads'
+import ChilePhoneField from '@/components/contact/ChilePhoneField.vue'
 import { wizardInjectionKey } from '@/composables/useWizard'
+import { isValidChileMobileDigits8, normalizeChileMobileToE164 } from '@/shared/chilePhone'
 
 const w = inject(wizardInjectionKey)!
 
@@ -10,13 +12,15 @@ const submitting = ref(false)
 const canSubmit = computed(
   () =>
     w.name.trim().length > 1 &&
-    w.phone.trim().length > 6 &&
+    isValidChileMobileDigits8(w.phone) &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(w.email.trim()) &&
     w.acceptedContact
 )
 
 async function submit() {
   if (!canSubmit.value || submitting.value) return
+  const phoneE164 = normalizeChileMobileToE164(w.phone)
+  if (!phoneE164) return
   submitting.value = true
   await submitEnergyLead({
     propertyType: w.propertyType,
@@ -24,7 +28,7 @@ async function submit() {
     mainGoal: w.mainGoal,
     region: w.region,
     name: w.name.trim(),
-    phone: w.phone.trim(),
+    phone: phoneE164,
     email: w.email.trim(),
     communeOrAddress: w.communeOrAddress.trim() || undefined,
     acceptedContact: w.acceptedContact,
@@ -45,13 +49,14 @@ async function submit() {
         <label class="lbl" for="f-name">Nombre</label>
         <input id="f-name" v-model="w.name" type="text" class="inp" autocomplete="name" />
       </div>
-      <div>
-        <label class="lbl" for="f-phone">Teléfono</label>
-        <input id="f-phone" v-model="w.phone" type="tel" class="inp" autocomplete="tel" />
-      </div>
+      <ChilePhoneField v-model="w.phone" input-id="f-phone" />
       <div>
         <label class="lbl" for="f-email">Email</label>
         <input id="f-email" v-model="w.email" type="email" class="inp" autocomplete="email" />
+        <p class="mail-hint">
+          Cotizaciones (Chile):
+          <a href="mailto:info@solutimp.cl">info@solutimp.cl</a>
+        </p>
       </div>
       <div>
         <label class="lbl" for="f-addr">Comuna o dirección aproximada <span class="opt">(opcional)</span></label>
@@ -117,6 +122,17 @@ async function submit() {
 .inp:focus {
   outline: 2px solid var(--se-cyan);
   outline-offset: 1px;
+}
+
+.mail-hint {
+  margin: 0.45rem 0 0;
+  font-size: 0.78rem;
+  color: var(--se-text-muted);
+  line-height: 1.4;
+}
+
+.mail-hint a {
+  color: var(--se-cyan);
 }
 
 .chk {

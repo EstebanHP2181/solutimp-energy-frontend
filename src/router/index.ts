@@ -19,6 +19,12 @@ const router = createRouter({
           component: () => import('@/pages/OnboardingPage.vue'),
           meta: { title: 'Evaluación' },
         },
+        {
+          path: 'calculadora',
+          name: 'calculadora',
+          component: () => import('@/pages/CalculadoraPage.vue'),
+          meta: { title: 'Calculadora solar' },
+        },
       ],
     },
   ],

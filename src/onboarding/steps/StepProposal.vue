@@ -5,6 +5,7 @@ import { useSavingsRangeAnimation } from '@/composables/useSavingsRangeAnimation
 import { useCountUp } from '@/composables/useCountUp'
 import { useInViewChildren } from '@/composables/useInViewAttribute'
 import { formatCLP } from '@/shared/formatCLP'
+import { buildWhatsAppLink } from '@/shared/whatsapp'
 
 const w = inject(wizardInjectionKey)!
 
@@ -174,11 +175,9 @@ const showBackup = computed(() => backup.value?.available === true)
 
 const showBatteryLine = computed(() => includesBattery.value || showBackup.value)
 
-const waUrl =
-  'https://wa.me/56222013315?text=' +
-  encodeURIComponent(
-    'Hola, completé la evaluación en Solutimp Energy y quiero más información sobre mi propuesta.'
-  )
+const waUrl = buildWhatsAppLink(
+  'Hola, completé la evaluación en Solutimp Energy y quiero más información sobre mi propuesta.'
+)
 
 const showTariffModal = ref(false)
 

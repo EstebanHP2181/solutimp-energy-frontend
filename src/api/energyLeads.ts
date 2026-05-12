@@ -10,6 +10,13 @@ export type EnergyLeadPayload = {
   email: string
   communeOrAddress?: string
   acceptedContact: boolean
+  /** Monto mensual luz (CLP) capturado en /calculadora; backend puede ignorar hasta soportarlo. */
+  monthlyBillAmount?: number
+  utm_source?: string
+  utm_medium?: string
+  utm_campaign?: string
+  utm_content?: string
+  utm_term?: string
 }
 
 /**
