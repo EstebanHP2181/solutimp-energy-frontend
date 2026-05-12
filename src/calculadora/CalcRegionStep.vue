@@ -20,7 +20,7 @@ const canContinue = computed(() => flow.canAdvanceRegion())
     <button
       type="button"
       class="se-btn se-btn--mt"
-      :disabled="!canContinue || flow.simulationLoading"
+      :disabled="!canContinue || flow.simulationLoading || flow.analysisPhase"
       @click="flow.continueFromRegion()"
     >
       <span v-if="flow.simulationLoading" class="spin" aria-hidden="true" />

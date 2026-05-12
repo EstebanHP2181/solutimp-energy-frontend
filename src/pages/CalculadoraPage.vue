@@ -5,6 +5,7 @@ import CalcHeroStep from '@/calculadora/CalcHeroStep.vue'
 import CalcProfileStep from '@/calculadora/CalcProfileStep.vue'
 import CalcRegionStep from '@/calculadora/CalcRegionStep.vue'
 import CalcResultStep from '@/calculadora/CalcResultStep.vue'
+import EnergyAnalysisLoading from '@/calculadora/EnergyAnalysisLoading.vue'
 import EnergyBackground from '@/components/wizard/EnergyBackground.vue'
 import WizardShell from '@/components/wizard/WizardShell.vue'
 import {
@@ -54,6 +55,7 @@ const showBack = computed(() => !showHero.value && flow.postHeroStep > 0)
       >
         <component :is="stepComponent" />
       </WizardShell>
+      <EnergyAnalysisLoading v-if="!showHero && flow.analysisPhase" />
     </div>
   </div>
 </template>
@@ -67,6 +69,7 @@ const showBack = computed(() => !showHero.value && flow.postHeroStep > 0)
 .calc-inner {
   position: relative;
   z-index: 1;
+  min-height: 12rem;
   max-width: 560px;
   margin: 0 auto;
   padding: 0.75rem 1rem 2rem;

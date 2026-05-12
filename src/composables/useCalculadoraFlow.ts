@@ -45,6 +45,7 @@ export function useCalculadoraFlow() {
   const region = ref('')
   const simulationResult = ref<SimulationResult | null>(null)
   const simulationLoading = ref(false)
+  const analysisPhase = ref(false)
 
   const name = ref('')
   const phone = ref('')
@@ -85,22 +86,36 @@ export function useCalculadoraFlow() {
     }
   }
 
+  const MIN_ANALYSIS_MS = 1800
+  const MAX_ANALYSIS_MS = 3200
+
+  function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms))
+  }
+
   async function runSimulate() {
     simulationLoading.value = true
     simulationResult.value = null
-    const minDelay = new Promise<void>((resolve) => setTimeout(resolve, 480))
+    const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now()
     try {
       const consumption_range = monthlyBillAmountToConsumptionRange(monthlyBillAmount.value)
-      const [res] = await Promise.all([
-        postSimulate({
-          property_type: (propertyType.value || 'casa') as string,
-          consumption_range,
-          main_goal: mapGoalToApi(mainGoal.value),
-          region: regionLabel(region.value),
-        }),
-        minDelay,
-      ])
+      const res = await postSimulate({
+        property_type: (propertyType.value || 'casa') as string,
+        consumption_range,
+        main_goal: mapGoalToApi(mainGoal.value),
+        region: regionLabel(region.value),
+      })
       simulationResult.value = res
+      const t1 = typeof performance !== 'undefined' ? performance.now() : Date.now()
+      const apiMs = t1 - t0
+      if (apiMs < MIN_ANALYSIS_MS) {
+        await sleep(MIN_ANALYSIS_MS - apiMs)
+      }
+      const t2 = typeof performance !== 'undefined' ? performance.now() : Date.now()
+      const total = t2 - t0
+      if (total < MAX_ANALYSIS_MS) {
+        await sleep(MAX_ANALYSIS_MS - total)
+      }
     } finally {
       simulationLoading.value = false
     }
@@ -108,7 +123,12 @@ export function useCalculadoraFlow() {
 
   async function continueFromRegion() {
     if (!canAdvanceRegion() || simulationLoading.value) return
-    await runSimulate()
+    analysisPhase.value = true
+    try {
+      await runSimulate()
+    } finally {
+      analysisPhase.value = false
+    }
     next()
   }
 
@@ -123,6 +143,7 @@ export function useCalculadoraFlow() {
     region,
     simulationResult,
     simulationLoading,
+    analysisPhase,
     consumptionRangeForApi,
     name,
     phone,
