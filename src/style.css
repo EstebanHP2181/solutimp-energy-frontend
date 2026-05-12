@@ -1,3 +1,37 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+
+:root {
+  --se-blue: #0066d9;
+  --se-blue-deep: #061426;
+  --se-blue-electric: #0a84ff;
+  --se-cyan: #00d4ff;
+  --se-green: #00c896;
+  --se-yellow: #ffd166;
+  --se-text: #ffffff;
+  --se-text-muted: #a8b3c7;
+  --se-glass: rgba(255, 255, 255, 0.07);
+  --se-glass-border: rgba(255, 255, 255, 0.14);
+  --se-glow: rgba(0, 102, 217, 0.45);
+  --se-radius-lg: 20px;
+  --se-radius-md: 14px;
+  --se-font: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --se-transition: 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --se-transition: 0.01ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 html,
 body,
 #app {
@@ -6,6 +40,19 @@ body,
 
 body {
   margin: 0;
+  font-family: var(--se-font);
+  color: var(--se-text);
+  background: var(--se-blue-deep);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Focus visible for keyboard */
+:focus-visible {
+  outline: 2px solid var(--se-cyan);
+  outline-offset: 3px;
+}
+
+button {
+  font-family: inherit;
 }

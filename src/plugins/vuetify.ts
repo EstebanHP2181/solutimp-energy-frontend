@@ -3,13 +3,15 @@ import { createVuetify } from 'vuetify'
 
 export default createVuetify({
   theme: {
-    defaultTheme: 'light',
+    defaultTheme: 'dark',
     themes: {
-      light: {
+      dark: {
+        dark: true,
         colors: {
-          primary: '#0d9488',
-          secondary: '#0f766e',
-          surface: '#f8fafc',
+          primary: '#0066d9',
+          secondary: '#0a84ff',
+          surface: '#0a1628',
+          background: '#061426',
         },
       },
     },

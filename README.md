@@ -49,10 +49,30 @@ Este directorio es un **repositorio Git propio** (no forma parte de un monorepo 
 
 Despliegue NGINX y checklist DNS: **`docs/DEPLOY-ENERGY-SUBDOMAIN.md`**.
 
+## Wizard de captación (MVP)
+
+- **`/`** — Landing campaña (CTA hacia el wizard).
+- **`/onboarding`** — Flujo paso a paso (bienvenida, propiedad, consumo, objetivo, región, contacto, gracias). El POST de lead usa `apiUrl('/api/v1/energy/leads')`; si el backend aún no responde, el flujo **sigue** y se muestra la pantalla final.
+- Estilos: variables CSS en `src/style.css`, fondo animado en `components/wizard/EnergyBackground.vue`, **SPA** con `public/.htaccess` (se copia a `dist/` en el build).
+
+## Despliegue estático (Hostinger)
+
+Ruta típica en este hosting:
+
+`/home/u642283732/domains/solutimp.cl/public_html/energy`
+
+```bash
+npm install --legacy-peer-deps
+VITE_API_BASE_URL=https://api.energy.solutimp.cl VITE_ROBOTS_NOINDEX=true npm run build
+cp -a dist/. /home/u642283732/domains/solutimp.cl/public_html/energy/
+```
+
+Comprobar `dist/.htaccess` y refresco en rutas del router (`/onboarding`).
+
 ## Comandos
 
 ```bash
-npm install
+npm install --legacy-peer-deps
 npm run dev
 ```
 
@@ -71,16 +91,16 @@ npm run dev
 | `components/`  | Componentes reutilizables                 |
 | `composables/` | Composables Vue                           |
 | `layouts/`     | Layouts (p. ej. mobile-first base)       |
-| `onboarding/`  | Módulo onboarding (vacío, preparado)     |
+| `onboarding/`  | Pasos del wizard (`steps/`)              |
 | `pages/`       | Vistas enlazadas al router               |
 | `proposal/`    | Módulo propuesta (vacío, preparado)      |
 | `router/`      | Vue Router                               |
 | `shared/`      | Utilidades y tipos compartidos           |
 | `stores/`      | Pinia stores                             |
 
-## Alcance actual (no implementado)
+## Alcance siguiente
 
-Google Maps, onboarding real, cálculos, autenticación y generación PDF quedan fuera de este scaffold.
+Mapa de techo, motor de cálculo solar real, BOM GoodWe/Trina/JA/Prodalam, ROI detallado y PDF quedan para fases posteriores. El wizard actual es **captación y orientación** sin cifras inventadas.
 
 ## Posibles conflictos
 
