@@ -9,7 +9,8 @@ const MESSAGES = [
   'Generando diagnóstico energético…',
 ] as const
 
-const ROTATE_MS = 720
+/** Ciclo de mensajes: 600–800 ms para sensación orgánica con el fade. */
+const ROTATE_MS = 700
 
 const idx = ref(0)
 const reduceMotion = ref(false)
@@ -48,12 +49,16 @@ onUnmounted(() => {
     </div>
 
     <div class="eal-inner">
-      <p class="eal-logo" aria-hidden="true">S⚡E</p>
+      <p class="eal-logo eal-logo--breathe" aria-hidden="true">S⚡E</p>
       <p class="eal-head">Tu hogar sigue funcionando</p>
       <p class="eal-sub">
         Estamos preparando una preevaluación de ahorro, respaldo y continuidad energética.
       </p>
-      <p class="eal-line">{{ line }}</p>
+      <div class="eal-line-wrap">
+        <Transition name="eal-fade" mode="out-in">
+          <p :key="idx" class="eal-line">{{ line }}</p>
+        </Transition>
+      </div>
     </div>
   </div>
 </template>
@@ -133,6 +138,11 @@ onUnmounted(() => {
   text-shadow: 0 0 28px rgba(0, 200, 150, 0.45);
 }
 
+/** Misma duración que `eal-glow-pulse` (3.2s) para respirar al unísono con el resplandor. */
+.eal-logo--breathe {
+  animation: eal-logo-breathe 3.2s ease-in-out infinite;
+}
+
 .eal-head {
   margin: 0 0 0.5rem;
   font-size: clamp(1.1rem, 3.8vw, 1.35rem);
@@ -148,13 +158,43 @@ onUnmounted(() => {
   color: #94a3b8;
 }
 
+.eal-line-wrap {
+  position: relative;
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .eal-line {
   margin: 0;
   font-size: 0.82rem;
   font-weight: 600;
   color: #5eead4;
-  min-height: 2.6rem;
   line-height: 1.4;
+  width: 100%;
+}
+
+.eal-fade-enter-active,
+.eal-fade-leave-active {
+  transition: opacity 0.28s ease;
+}
+
+.eal-fade-enter-from,
+.eal-fade-leave-to {
+  opacity: 0;
+}
+
+@keyframes eal-logo-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    text-shadow: 0 0 20px rgba(0, 200, 150, 0.35);
+  }
+  50% {
+    transform: scale(1.045);
+    text-shadow: 0 0 36px rgba(0, 200, 150, 0.55);
+  }
 }
 
 @keyframes eal-glow-pulse {
@@ -187,6 +227,15 @@ onUnmounted(() => {
   .eal-glow {
     animation: none;
     opacity: 0.75;
+  }
+
+  .eal-logo--breathe {
+    animation: none;
+  }
+
+  .eal-fade-enter-active,
+  .eal-fade-leave-active {
+    transition: none;
   }
 
   .eal-radar-ring--a,
