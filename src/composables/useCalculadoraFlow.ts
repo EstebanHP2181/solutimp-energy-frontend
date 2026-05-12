@@ -2,7 +2,10 @@ import type { InjectionKey, UnwrapNestedRefs } from 'vue'
 import { computed, reactive, ref } from 'vue'
 import { postSimulate, type SimulationResult } from '@/api/energySimulate'
 import { CHILE_REGIONS } from '@/shared/chileRegions'
-import { monthlyBillAmountToConsumptionRange } from '@/shared/monthlyBillToConsumptionRange'
+import {
+  consumptionRangeForPrudentSimulate,
+  monthlyBillAmountToConsumptionRange,
+} from '@/shared/monthlyBillToConsumptionRange'
 
 /** Alineado a useWizard (sin importar el composable para no acoplar flujos). */
 export type CalcPropertyType = 'casa' | 'parcela' | 'empresa' | 'condominio' | 'bodega' | ''
@@ -98,7 +101,10 @@ export function useCalculadoraFlow() {
     simulationResult.value = null
     const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now()
     try {
-      const consumption_range = monthlyBillAmountToConsumptionRange(monthlyBillAmount.value)
+      const consumption_range = consumptionRangeForPrudentSimulate(
+        monthlyBillAmount.value,
+        mainGoal.value,
+      )
       const res = await postSimulate({
         property_type: (propertyType.value || 'casa') as string,
         consumption_range,

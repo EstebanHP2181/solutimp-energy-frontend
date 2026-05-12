@@ -10,7 +10,7 @@ export type RoofFeasibilityInput = {
 }
 
 const ADVANCED_SURFACE_WARNING =
-  'Este proyecto requiere validación técnica avanzada de superficie, orientación y sombras.'
+  'Este nivel de potencia requiere validación técnica avanzada mediante visita o análisis satelital.'
 
 const ORIENTATION_COPY = 'Idealmente norte, nororiente o norponiente.'
 
@@ -84,9 +84,14 @@ export function getRoofFeasibilityCopy(input: RoofFeasibilityInput): RoofFeasibi
   if (m2 == null) return null
 
   const phrase = surfaceContextPhrase(input.propertyType)
+  const headline =
+    input.propertyType === 'casa' || input.propertyType === 'parcela'
+      ? `Requiere ~${m2} m² de techumbre útil.`
+      : `Requiere ~${m2} m² de superficie útil en cubierta o estructura.`
+
   return {
     title: TITLE_COPY,
-    headline: `Este sistema requiere aprox. ${m2} m² de superficie despejada.`,
+    headline,
     contextLine: `Como referencia de emplazamiento, piensa en ${phrase}.`,
     orientation: ORIENTATION_COPY,
     disclaimer: DISCLAIMER_COPY,

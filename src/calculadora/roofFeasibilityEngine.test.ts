@@ -37,11 +37,17 @@ describe('getRoofFeasibilityCopy', () => {
     expect(c!.contextLine.toLowerCase()).toContain('cubierta')
   })
 
-  it('>= 80 m² activa advertencia avanzada', () => {
+  it('>= 80 m² activa advertencia avanzada (visita o satelital)', () => {
     // 24 paneles => ceil(80.64) = 81 m²
     const c = getRoofFeasibilityCopy({ panelCount: 24, propertyType: 'empresa' })
     expect(c).not.toBeNull()
-    expect(c!.advancedWarning).toMatch(/validación técnica avanzada/i)
+    expect(c!.advancedWarning).toMatch(/visita o análisis satelital/i)
+  })
+
+  it('casa usa techumbre útil en titular', () => {
+    const c = getRoofFeasibilityCopy({ panelCount: 10, propertyType: 'casa' })
+    expect(c).not.toBeNull()
+    expect(c!.headline).toMatch(/techumbre útil/i)
   })
 
   it('debajo de 80 m² sin advertencia avanzada', () => {

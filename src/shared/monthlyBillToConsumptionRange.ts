@@ -13,6 +13,24 @@ export function monthlyBillAmountToConsumptionRange(clp: number): SimulateConsum
   return 'mas_200k'
 }
 
+/**
+ * Rango enviado a `POST /energy/simulate`: un escalón más conservador en la banda media
+ * para perfiles de ahorro/eficiencia (evita dimensionamientos agresivos tipo 8 kWp híbrido
+ * cuando la boleta cae en 100k–200k sin prioridad de continuidad avanzada).
+ * El lead y CRM siguen usando `monthlyBillAmountToConsumptionRange` sin cambios.
+ */
+export function consumptionRangeForPrudentSimulate(
+  clp: number,
+  mainGoal: string
+): SimulateConsumptionRangeCode {
+  const base = monthlyBillAmountToConsumptionRange(clp)
+  const continuityHeavy = mainGoal === 'respaldo' || mainGoal === 'equipos_criticos'
+  if (continuityHeavy) return base
+  const prudent = mainGoal === 'ahorro' || mainGoal === '' || mainGoal === 'empresa'
+  if (prudent && base === '100k_200k') return '50k_100k'
+  return base
+}
+
 /** Valor `consumptionRange` del lead alineado al wizard /onboarding (mismo contrato que hoy). */
 export function simulateConsumptionRangeToLeadConsumptionRange(
   code: SimulateConsumptionRangeCode

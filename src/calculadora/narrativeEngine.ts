@@ -70,7 +70,7 @@ const LOADING_INDUSTRIAL: readonly string[] = [
 
 const LOADING_AGRI: readonly string[] = [
   'Analizando radiación solar estimada…',
-  'Evaluando superficie disponible para paneles…',
+  'Evaluando superficie útil para módulos fotovoltaicos…',
   'Estimando demanda en campo y parcela…',
   'Evaluando respaldo para bombas, accesos y seguridad…',
   'Optimizando autonomía referencial…',
@@ -117,7 +117,7 @@ const LOADING_SAVINGS_RURAL: readonly string[] = [
   'Generando preevaluación energética…',
 ]
 
-const CHIPS_EXPORT = ['Autoconsumo referencial', 'Excedentes y medición', 'Superficie para paneles', 'Visita técnica'] as const
+const CHIPS_EXPORT = ['Autoconsumo referencial', 'Excedentes y medición', 'Superficie para módulos fotovoltaicos', 'Visita técnica'] as const
 
 const CHIPS_RESIDENTIAL = ['Portón automático', 'CCTV / cámaras', 'Router / WiFi', 'Iluminación crítica'] as const
 const CHIPS_COMMERCIAL = ['Refrigeración', 'POS / caja', 'CCTV / cámaras', 'Internet', 'Iluminación esencial'] as const
@@ -125,9 +125,9 @@ const CHIPS_INDUSTRIAL = ['Accesos', 'CCTV', 'Iluminación crítica', 'Equipos e
 const CHIPS_AGRI = ['Bombas', 'Portón', 'Iluminación', 'Internet', 'Seguridad'] as const
 const CHIPS_GENERIC = ['Portón automático', 'CCTV / cámaras', 'Router / WiFi', 'Iluminación crítica'] as const
 
-const WA_BTN = 'Contactar por WhatsApp'
+const WA_BTN = 'Hablar con un especialista energético'
 
-const CTA_SAVINGS = 'Quiero revisar mi ahorro con un especialista'
+const CTA_SAVINGS = 'Validar factibilidad técnica con un especialista'
 
 function pickChips(
   base: readonly string[],
@@ -199,7 +199,7 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
           'Estamos preparando una preevaluación de autoconsumo, excedentes y net billing referencial.',
         loadingMessages: LOADING_EXPORT_RESIDENTIAL,
         whatsappIntentLine: 'Quiero evaluar mi potencial de generación y excedentes solares.',
-        formRevealCtaLabel: 'Quiero evaluar mi potencial solar',
+        formRevealCtaLabel: 'Evaluar mi infraestructura energética y excedentes',
         whatsappButtonLabel: WA_BTN,
         planDisclaimer: residentialDisclaimer,
         referentialAutonomy: null,
@@ -223,7 +223,7 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
         loadingSubcopy: 'Estamos preparando una preevaluación de autoconsumo, excedentes y generación referencial.',
         loadingMessages: LOADING_EXPORT_RURAL,
         whatsappIntentLine: 'Quiero evaluar autonomía y excedentes solares en mi parcela o campo.',
-        formRevealCtaLabel: 'Evaluar potencial solar en mi propiedad',
+        formRevealCtaLabel: 'Evaluar autonomía y factibilidad en mi propiedad',
         whatsappButtonLabel: WA_BTN,
         planDisclaimer: ruralParcelDisclaimer,
         referentialAutonomy: null,
@@ -247,7 +247,7 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
         loadingSubcopy: 'Estamos preparando una preevaluación de generación, excedentes y autoconsumo referencial.',
         loadingMessages: LOADING_EXPORT_BUSINESS,
         whatsappIntentLine: 'Quiero evaluar generación y excedentes solares para mi operación.',
-        formRevealCtaLabel: 'Evaluar generación y excedentes',
+        formRevealCtaLabel: 'Evaluar generación y excedentes con un especialista',
         whatsappButtonLabel: WA_BTN,
         planDisclaimer: nonResidentialDisclaimer,
         referentialAutonomy: null,
@@ -367,7 +367,7 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
         loadingSubcopy: 'Estamos preparando una preevaluación de ahorro, respaldo y continuidad energética.',
         loadingMessages: LOADING_RESIDENTIAL,
         whatsappIntentLine: 'Mi prioridad es mantener funcionando mi hogar ante cortes.',
-        formRevealCtaLabel: 'Quiero validar el respaldo de mi hogar',
+        formRevealCtaLabel: 'Revisar autonomía energética de mi hogar',
         whatsappButtonLabel: WA_BTN,
         planDisclaimer: residentialDisclaimer,
         referentialAutonomy: { hoursMin: 8, hoursMax: 14, scopeLine: 'para cargas esenciales del hogar' },
@@ -391,7 +391,7 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
         loadingSubcopy: 'Estamos preparando una preevaluación para ahorro, respaldo y autonomía referencial.',
         loadingMessages: LOADING_AGRI,
         whatsappIntentLine: 'Quiero evaluar autonomía energética para mi propiedad.',
-        formRevealCtaLabel: 'Evaluar autonomía energética',
+        formRevealCtaLabel: 'Revisar autonomía de mi propiedad con un especialista',
         whatsappButtonLabel: WA_BTN,
         planDisclaimer: ruralParcelDisclaimer,
         referentialAutonomy: { hoursMin: 8, hoursMax: 16, scopeLine: 'para cargas esenciales rurales' },
@@ -415,7 +415,7 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
         loadingSubcopy: 'Estamos preparando una preevaluación para ahorro, respaldo y operación crítica.',
         loadingMessages: LOADING_COMMERCIAL,
         whatsappIntentLine: 'Mi prioridad es mantener operativo mi negocio ante cortes eléctricos.',
-        formRevealCtaLabel: 'Solicitar evaluación operacional',
+        formRevealCtaLabel: 'Validar continuidad operacional con un especialista',
         whatsappButtonLabel: WA_BTN,
         planDisclaimer: nonResidentialDisclaimer,
         referentialAutonomy: { hoursMin: 4, hoursMax: 8, scopeLine: 'para operación crítica básica' },
@@ -439,7 +439,7 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
         loadingSubcopy: 'Estamos preparando una preevaluación para protección de equipos y operación crítica.',
         loadingMessages: LOADING_COMMERCIAL,
         whatsappIntentLine: 'Mi prioridad es proteger equipos críticos de mi operación ante cortes.',
-        formRevealCtaLabel: 'Solicitar evaluación operacional',
+        formRevealCtaLabel: 'Validar protección de equipos con un especialista',
         whatsappButtonLabel: WA_BTN,
         planDisclaimer: nonResidentialDisclaimer,
         referentialAutonomy: { hoursMin: 4, hoursMax: 8, scopeLine: 'para operación crítica básica' },
@@ -487,7 +487,7 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
         loadingSubcopy: 'Estamos preparando una preevaluación para ahorro, respaldo y continuidad operativa.',
         loadingMessages: LOADING_INDUSTRIAL,
         whatsappIntentLine: 'Quiero evaluar respaldo energético para mi operación crítica.',
-        formRevealCtaLabel: 'Coordinar diagnóstico de infraestructura',
+        formRevealCtaLabel: 'Evaluar mi infraestructura energética',
         whatsappButtonLabel: WA_BTN,
         planDisclaimer: nonResidentialDisclaimer,
         referentialAutonomy: { hoursMin: 6, hoursMax: 12, scopeLine: 'para accesos, seguridad y comunicaciones' },
@@ -511,7 +511,7 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
         loadingSubcopy: 'Estamos preparando una preevaluación de ahorro y escenario solar referencial.',
         loadingMessages: LOADING_INDUSTRIAL,
         whatsappIntentLine: 'Quiero revisar el ahorro estimado y una propuesta solar para mi instalación.',
-        formRevealCtaLabel: 'Quiero revisar mi ahorro con un especialista',
+        formRevealCtaLabel: CTA_SAVINGS,
         whatsappButtonLabel: WA_BTN,
         planDisclaimer: nonResidentialDisclaimer,
         referentialAutonomy: null,
@@ -535,7 +535,7 @@ export function getEnergyNarrativeContext(input: EnergyNarrativeInput): EnergyNa
         loadingSubcopy: 'Estamos preparando una preevaluación de ahorro, respaldo y continuidad energética.',
         loadingMessages: LOADING_RESIDENTIAL,
         whatsappIntentLine: 'Quiero revisar el ahorro estimado y una propuesta solar.',
-        formRevealCtaLabel: 'Solicitar evaluación técnica',
+        formRevealCtaLabel: 'Hablar con un especialista energético',
         whatsappButtonLabel: WA_BTN,
         planDisclaimer: residentialDisclaimer,
         referentialAutonomy: null,

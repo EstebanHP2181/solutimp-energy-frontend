@@ -17,7 +17,7 @@ describe('getEnergyNarrativeContext', () => {
       hoursMax: 12,
       scopeLine: 'para accesos, seguridad y comunicaciones',
     })
-    expect(c.formRevealCtaLabel).toBe('Coordinar diagnóstico de infraestructura')
+    expect(c.formRevealCtaLabel).toBe('Evaluar mi infraestructura energética')
   })
 
   it('empresa + respaldo → operational_business', () => {
@@ -30,7 +30,7 @@ describe('getEnergyNarrativeContext', () => {
       hoursMax: 8,
       scopeLine: 'para operación crítica básica',
     })
-    expect(c.formRevealCtaLabel).toBe('Solicitar evaluación operacional')
+    expect(c.formRevealCtaLabel).toBe('Validar continuidad operacional con un especialista')
     expect(concatNonResidentialCopy(c).toLowerCase()).not.toContain('hogar')
   })
 
@@ -40,7 +40,7 @@ describe('getEnergyNarrativeContext', () => {
     expect(c.primaryKpiMode).toBe('savings')
     expect(c.loadingHeadline).toMatch(/hogar/i)
     expect(c.referentialAutonomy).toBeNull()
-    expect(c.formRevealCtaLabel).toContain('ahorro')
+    expect(c.formRevealCtaLabel).toMatch(/factibilidad|especialista/i)
   })
 
   it('casa + respaldo → backup_residential con autonomía 8–14 h', () => {
@@ -48,7 +48,7 @@ describe('getEnergyNarrativeContext', () => {
     expect(c.segmentKey).toBe('backup_residential')
     expect(c.referentialAutonomy?.hoursMin).toBe(8)
     expect(c.referentialAutonomy?.hoursMax).toBe(14)
-    expect(c.formRevealCtaLabel).toBe('Quiero validar el respaldo de mi hogar')
+    expect(c.formRevealCtaLabel).toBe('Revisar autonomía energética de mi hogar')
   })
 
   it('parcela + equipos → backup_rural', () => {
@@ -61,7 +61,7 @@ describe('getEnergyNarrativeContext', () => {
       hoursMax: 16,
       scopeLine: 'para cargas esenciales rurales',
     })
-    expect(c.formRevealCtaLabel).toBe('Evaluar autonomía energética')
+    expect(c.formRevealCtaLabel).toBe('Revisar autonomía de mi propiedad con un especialista')
   })
 
   it('condominio + respaldo → condominium_backup', () => {

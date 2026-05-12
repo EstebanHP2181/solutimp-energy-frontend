@@ -73,8 +73,8 @@ async function submit() {
 <template>
   <div class="contact">
     <template v-if="!sent">
-      <h3 class="sub-q">¿Quieres que te contactemos?</h3>
-      <p class="hint">Deja tus datos y un asesor te responderá en horario hábil.</p>
+      <h3 class="sub-q">¿Quieres que un especialista energético te contacte?</h3>
+      <p class="hint">Deja tus datos y coordinamos una revisión técnica en horario hábil.</p>
       <div class="fields">
         <div>
           <label class="lbl" for="calc-name">Nombre</label>

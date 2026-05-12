@@ -6,6 +6,9 @@ import {
   getEnergyNarrativeContext,
 } from '@/calculadora/narrativeEngine'
 import { getRoofFeasibilityCopy } from '@/calculadora/roofFeasibilityEngine'
+import { preliminaryInvestmentDisplayLine } from '@/calculadora/investmentEstimate'
+import { getContinuityDuringOutageRows } from '@/calculadora/continuityDuringOutageCopy'
+import { resolveNarrativeSegment } from '@/calculadora/semanticDecisionEngine'
 import { formatCLP } from '@/shared/formatCLP'
 import { buildWhatsAppLink } from '@/shared/whatsapp'
 import CalcContactBlock from './CalcContactBlock.vue'
@@ -42,54 +45,6 @@ function revealContactForm() {
     el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   })
 }
-
-/** Orden visual por primaryKpiMode (flex `order` en .plan-flow). */
-const slotOrder = computed(() => {
-  const m = visualPriority.value
-  if (m === 'continuity') {
-    return {
-      backupEarly: 10,
-      autonomy: 20,
-      roof: 25,
-      savings: 30,
-      annual: 35,
-      compare: 40,
-      narrative: 50,
-      sistemaOrphan: 55,
-      backupLate: 99,
-      coverage: 99,
-      sistema: 99,
-    }
-  }
-  if (m === 'coverage') {
-    return {
-      coverage: 10,
-      sistema: 20,
-      roof: 25,
-      savings: 30,
-      annual: 35,
-      compare: 40,
-      narrative: 45,
-      backupLate: 50,
-      backupEarly: 99,
-      autonomy: 99,
-      sistemaOrphan: 99,
-    }
-  }
-  return {
-    savings: 10,
-    annual: 15,
-    compare: 20,
-    narrative: 30,
-    roof: 31,
-    sistemaOrphan: 35,
-    backupLate: 40,
-    backupEarly: 99,
-    autonomy: 99,
-    coverage: 99,
-    sistema: 99,
-  }
-})
 
 const sim = computed(() => flow.simulationResult)
 const econ = computed(() => sim.value?.economics)
@@ -209,39 +164,93 @@ const narrativePanelsN = computed(() => {
   return Math.round(p)
 })
 
-const narrativeRoiBlock = computed(() => {
-  const roi = roiYearsSafe.value
-  if (roi == null) return null
-  const roiStr = roi.toLocaleString('es-CL', { maximumFractionDigits: 1 })
-  const life = lifetime25Safe.value
-  const lifeLine =
-    life != null ? `Proyectamos un ahorro referencial de ${formatCLP(life)} acumulado a 25 años.` : null
-  return { roiStr, lifeLine }
+/** Jerarquía fija de secciones (orden visual unificado). */
+const PLAN_ORDER = {
+  technical: 12,
+  investment: 20,
+  continuity: 28,
+  roof: 40,
+  impact: 45,
+  roi: 55,
+  narrative: 62,
+} as const
+
+const INVESTMENT_SUBTEXT =
+  'Estimación referencial sujeta a visita técnica, orientación solar, estructura y configuración final.'
+
+const RESULT_LEGAL_DISCLAIMER =
+  'Evaluación preliminar referencial. La configuración final depende de orientación, sombras, superficie útil, consumo real, estructura, distribuidora eléctrica, factibilidad SEC y hábitos energéticos.'
+
+const segmentKey = computed(() =>
+  resolveNarrativeSegment({
+    propertyType: flow.propertyType,
+    mainGoal: flow.mainGoal,
+  }),
+)
+
+const isExportSegment = computed(() => segmentKey.value.startsWith('export_'))
+
+const continuityMainTitle = computed(() =>
+  isExportSegment.value
+    ? 'Independencia energética y valorización de excedentes'
+    : 'Capacidad de continuidad, autonomía parcial y resiliencia',
+)
+
+const showContinuityScenarioList = computed(() => !isExportSegment.value)
+
+const continuityOutageRows = computed(() => getContinuityDuringOutageRows(flow.propertyType))
+
+const continuityAccent = computed(
+  () => visualPriority.value === 'continuity' || visualPriority.value === 'coverage',
+)
+
+const investmentPrimaryLine = computed(() => {
+  const k = powerKwp.value
+  if (k == null || !Number.isFinite(k) || k <= 0) return null
+  return preliminaryInvestmentDisplayLine(k)
 })
 
-const systemTeaser = computed(() => {
+const systemConfigLead = computed(() => {
   const parts: string[] = []
-  if (panels.value != null && powerKwp.value != null) {
-    parts.push(`${panels.value} paneles · ${powerKwp.value} kWp`)
-  } else if (powerKwp.value != null) {
-    parts.push(`${powerKwp.value} kWp estimados`)
+  const k = powerKwp.value
+  const p = panels.value
+  if (k != null && Number.isFinite(k) && k > 0) {
+    parts.push(`Infraestructura solar referencial ~${k.toLocaleString('es-CL', { maximumFractionDigits: 1 })} kWp`)
   }
-  if (includesBattery.value) parts.push('Respaldo con batería')
-  else if (backup.value?.available) parts.push('Opción de respaldo')
+  if (p != null && Number.isFinite(p) && p > 0) {
+    parts.push(`${Math.round(p)} módulos fotovoltaicos`)
+  }
+  if (includesBattery.value) {
+    parts.push('Sistema de almacenamiento inteligente (referencial)')
+  } else if (backup.value?.available) {
+    parts.push('Espacio técnico para configuración híbrida y continuidad (a validar en visita)')
+  }
   return parts.length ? parts.join(' · ') : null
 })
 
+const showTechnicalConfig = computed(
+  () => !!systemConfigLead.value || narrativeKwpStr.value != null || narrativePanelsN.value != null,
+)
+
 const showNarrativeSpecs = computed(() => visualPriority.value !== 'coverage')
 
-const showCoverageSistema = computed(
-  () =>
-    visualPriority.value === 'coverage' &&
-    (!!systemTeaser.value || narrativeKwpStr.value != null || narrativePanelsN.value != null)
-)
-
-const showSistemaOrphan = computed(
-  () => !narrativeBillFormatted.value && !!systemTeaser.value && visualPriority.value !== 'coverage'
-)
+const roiReferentialUi = computed(() => {
+  const y = roiYearsSafe.value
+  if (y == null || !Number.isFinite(y) || y <= 0) return null
+  const center = Math.round(y)
+  const low = Math.max(5, center - 2)
+  const high = Math.min(16, center + 2)
+  const life = lifetime25Safe.value
+  return {
+    rangeLine: `Retorno estimado entre ${low} y ${high} años según consumo, orientación y hábitos energéticos.`,
+    financialLongTermNote:
+      life != null
+        ? `Ahorro acumulado referencial a 25 años del orden de ${formatCLP(life)} (proyección, no garantía contractual).`
+        : null,
+    continuityNote:
+      'La continuidad operacional se valora aparte del retorno financiero: depende de cargas seleccionadas, almacenamiento e ingeniería de integración.',
+  }
+})
 
 const roofFeasibilityCopy = computed(() =>
   getRoofFeasibilityCopy({
@@ -268,7 +277,7 @@ const waHref = computed(() => {
   const sol = solarBill.value
   const ann = econ.value?.annual_savings
 
-  let body = 'Hola, simulé mi sistema solar en Solutimp Energy.'
+  let body = 'Hola, completé una evaluación preliminar de autonomía energética en Solutimp Energy.'
   const hasDec = dec != null && Number.isFinite(dec) && dec > 0
   const hasSol = sol != null && Number.isFinite(sol) && sol >= 0
   const hasAnn = ann != null && Number.isFinite(ann) && ann > 0
@@ -278,8 +287,8 @@ const waHref = computed(() => {
   }
   if (hasSol && sol != null) {
     body += hasDec
-      ? ` y el simulador estimó un escenario con solar de ${formatCLP(Math.round(sol))}/mes`
-      : ` El simulador estimó un escenario con solar de ${formatCLP(Math.round(sol))}/mes`
+      ? ` y el evaluador estimó un escenario con infraestructura solar de ${formatCLP(Math.round(sol))}/mes`
+      : ` El evaluador estimó un escenario con infraestructura solar de ${formatCLP(Math.round(sol))}/mes`
   }
   if (hasAnn && ann != null) {
     body += hasDec || hasSol
@@ -296,36 +305,60 @@ const waHref = computed(() => {
   <div class="plan">
     <header class="plan-head animate">
       <p class="plan-eyebrow">{{ narration.resultSubtitle }}</p>
+      <p class="plan-kicker">Diagnóstico energético preliminar</p>
       <h2 class="plan-title">{{ narration.resultTitle }}</h2>
       <p v-if="narration.mainClaim" class="plan-claim">{{ narration.mainClaim }}</p>
     </header>
 
     <div class="plan-flow">
-      <!-- Continuidad: respaldo + sistemas protegidos primero -->
+      <!-- 2. Configuración técnica sugerida -->
       <section
-        v-if="visualPriority === 'continuity'"
-        class="plan-slot plan-backup plan-backup--prominent animate"
-        :style="{ order: slotOrder.backupEarly }"
+        v-if="showTechnicalConfig"
+        class="plan-slot plan-tech animate"
+        :style="{ order: PLAN_ORDER.technical }"
       >
-        <h3 class="plan-backup-title">{{ narration.backupTitle }}</h3>
-        <p class="plan-backup-lead">{{ narration.backupCopy }}</p>
-        <h4 class="plan-systems-heading">Sistemas protegidos</h4>
-        <ul class="plan-chip-list" aria-label="Ejemplos de cargas protegidas">
-          <li v-for="(c, i) in narration.protectedLoadChips" :key="i" class="plan-chip">
-            <span class="plan-chip-ico" aria-hidden="true">✓</span>{{ c }}
-          </li>
-        </ul>
-        <p class="plan-backup-foot">{{ narration.backupFootDisclaimer }}</p>
+        <h3 class="plan-section-title">Configuración técnica sugerida</h3>
+        <p v-if="systemConfigLead" class="plan-tech-lead">{{ systemConfigLead }}</p>
+        <template v-if="narrativeKwpStr != null || narrativePanelsN != null">
+          <p class="plan-narr-callout">Referencia de dimensionamiento</p>
+          <ul class="plan-narr-specs" aria-label="Dimensionamiento referencial">
+            <li v-if="narrativeKwpStr != null" class="plan-narr-spec">
+              <span class="plan-narr-ico" aria-hidden="true">☀️</span>
+              <span><strong>{{ narrativeKwpStr }} kWp</strong> de infraestructura solar</span>
+            </li>
+            <li v-if="narrativePanelsN != null" class="plan-narr-spec">
+              <span class="plan-narr-ico" aria-hidden="true">⚡</span>
+              <span><strong>{{ narrativePanelsN }} módulos fotovoltaicos</strong></span>
+            </li>
+          </ul>
+        </template>
       </section>
 
-      <!-- Cobertura (parcela/campo): autonomía referencial -->
+      <!-- 3. Inversión preliminar -->
       <section
-        v-if="visualPriority === 'coverage' && narration.referentialAutonomy"
-        class="plan-slot plan-coverage animate"
-        :style="{ order: slotOrder.coverage }"
+        class="plan-slot plan-invest animate"
+        :style="{ order: PLAN_ORDER.investment }"
       >
-        <h3 class="plan-coverage-title">Cobertura energética</h3>
-        <div class="plan-autonomy plan-autonomy--hero">
+        <h3 class="plan-section-title">Inversión preliminar estimada</h3>
+        <p v-if="investmentPrimaryLine" class="plan-invest-line">{{ investmentPrimaryLine }}</p>
+        <p v-else class="plan-invest-line plan-invest-line--soft">
+          Monto sujeto a dimensionamiento en visita técnica (referencial).
+        </p>
+        <p class="plan-invest-sub">{{ INVESTMENT_SUBTEXT }}</p>
+      </section>
+
+      <!-- 4. Continuidad / resiliencia (o independencia en export) -->
+      <section
+        class="plan-slot plan-continuity animate"
+        :class="{ 'plan-continuity--accent': continuityAccent }"
+        :style="{ order: PLAN_ORDER.continuity }"
+      >
+        <h3 class="plan-section-title">{{ continuityMainTitle }}</h3>
+
+        <div
+          v-if="visualPriority === 'coverage' && narration.referentialAutonomy"
+          class="plan-autonomy plan-autonomy--hero plan-autonomy--embed"
+        >
           <p class="plan-autonomy-kpi">Autonomía referencial</p>
           <p class="plan-autonomy-range">
             Entre {{ narration.referentialAutonomy.hoursMin }}–{{ narration.referentialAutonomy.hoursMax }} h
@@ -333,55 +366,56 @@ const waHref = computed(() => {
           </p>
           <p class="plan-autonomy-disclaimer">{{ AUTONOMY_RANGE_DISCLAIMER }}</p>
         </div>
-      </section>
 
-      <!-- Continuidad: KPI autonomía (rangos referenciales) -->
-      <section
-        v-if="visualPriority === 'continuity' && narration.referentialAutonomy"
-        class="plan-slot plan-autonomy plan-autonomy--hero animate"
-        :style="{ order: slotOrder.autonomy }"
-      >
-        <p class="plan-autonomy-kpi">Autonomía referencial</p>
-        <p class="plan-autonomy-range">
-          Entre {{ narration.referentialAutonomy.hoursMin }}–{{ narration.referentialAutonomy.hoursMax }} h
-          <span class="plan-autonomy-scope">{{ narration.referentialAutonomy.scopeLine }}</span>
-        </p>
-        <p class="plan-autonomy-disclaimer">{{ AUTONOMY_RANGE_DISCLAIMER }}</p>
-      </section>
+        <p class="plan-continuity-keyline">{{ narration.backupTitle }}</p>
+        <p class="plan-backup-lead">{{ narration.backupCopy }}</p>
 
-      <!-- Cobertura: sistema recomendado -->
-      <section
-        v-if="showCoverageSistema"
-        class="plan-slot plan-sistema animate"
-        :style="{ order: slotOrder.sistema }"
-      >
-        <h3 class="plan-sistema-title">Sistema recomendado</h3>
-        <p v-if="systemTeaser" class="plan-sistema-lead">{{ systemTeaser }}</p>
-        <template v-if="narrativeKwpStr != null || narrativePanelsN != null">
-          <p class="plan-narr-callout">Estimamos un sistema cercano a:</p>
-          <ul class="plan-narr-specs" aria-label="Tamaño de sistema estimado">
-            <li v-if="narrativeKwpStr != null" class="plan-narr-spec">
-              <span class="plan-narr-ico" aria-hidden="true">☀️</span>
-              <span><strong>{{ narrativeKwpStr }} kWp</strong></span>
-            </li>
-            <li v-if="narrativePanelsN != null" class="plan-narr-spec">
-              <span class="plan-narr-ico" aria-hidden="true">🔋</span>
-              <span><strong>{{ narrativePanelsN }} paneles solares</strong></span>
+        <div
+          v-if="visualPriority === 'continuity' && narration.referentialAutonomy"
+          class="plan-autonomy plan-autonomy--hero plan-autonomy--embed"
+        >
+          <p class="plan-autonomy-kpi">Autonomía referencial</p>
+          <p class="plan-autonomy-range">
+            Entre {{ narration.referentialAutonomy.hoursMin }}–{{ narration.referentialAutonomy.hoursMax }} h
+            <span class="plan-autonomy-scope">{{ narration.referentialAutonomy.scopeLine }}</span>
+          </p>
+          <p class="plan-autonomy-disclaimer">{{ AUTONOMY_RANGE_DISCLAIMER }}</p>
+        </div>
+
+        <template v-if="showContinuityScenarioList">
+          <h4 class="plan-continuity-subtitle">Qué podría seguir funcionando durante cortes</h4>
+          <ul class="plan-outage-list" aria-label="Ejemplos referenciales ante interrupciones">
+            <li
+              v-for="(row, i) in continuityOutageRows"
+              :key="i"
+              :class="['plan-outage-item', `plan-outage-item--${row.tier}`]"
+            >
+              <span class="plan-outage-ico" aria-hidden="true">{{ row.tier === 'ok' ? '✅' : '⚠️' }}</span>
+              <span>{{ row.text }}</span>
             </li>
           </ul>
         </template>
+
+        <h4 class="plan-systems-heading">Cargas priorizadas en esta evaluación</h4>
+        <ul class="plan-chip-list" aria-label="Cargas priorizadas">
+          <li v-for="(c, i) in narration.protectedLoadChips" :key="i" class="plan-chip">
+            <span class="plan-chip-ico" aria-hidden="true">✓</span>{{ c }}
+          </li>
+        </ul>
+        <p class="plan-backup-foot">{{ narration.backupFootDisclaimer }}</p>
       </section>
 
+      <!-- 5. Factibilidad técnica de superficie -->
       <section
         v-if="roofFeasibilityCopy"
         class="plan-slot plan-roof animate"
-        :style="{ order: slotOrder.roof }"
+        :style="{ order: PLAN_ORDER.roof }"
       >
         <h3 class="plan-roof-title">{{ roofFeasibilityCopy.title }}</h3>
         <p class="plan-roof-headline">{{ roofFeasibilityCopy.headline }}</p>
         <p class="plan-roof-context">{{ roofFeasibilityCopy.contextLine }}</p>
         <p v-if="roofFeasibilityCopy.parkingEquivalence" class="plan-roof-parking">
-          Eso equivale a {{ roofFeasibilityCopy.parkingEquivalence }} (referencia visual).
+          Equivale aprox. a {{ roofFeasibilityCopy.parkingEquivalence }} (referencia visual).
         </p>
         <p class="plan-roof-orient">{{ roofFeasibilityCopy.orientation }}</p>
         <p v-if="roofFeasibilityCopy.advancedWarning" class="plan-roof-warn" role="status">
@@ -390,64 +424,16 @@ const waHref = computed(() => {
         <p class="plan-roof-foot">{{ roofFeasibilityCopy.disclaimer }}</p>
       </section>
 
-      <!-- Ahorro mensual -->
-      <section
-        class="plan-slot plan-kpi animate"
-        :class="{ 'plan-kpi--secondary': visualPriority !== 'savings' }"
-        :style="{ order: slotOrder.savings }"
-      >
-        <template v-if="monthlySavingsUi.kind === 'lowConsumption'">
-          <p class="plan-kpi-label">
-            {{ visualPriority === 'savings' ? 'Ahorro mensual estimado' : 'Ahorro mensual referencial' }}
-          </p>
-          <p class="plan-kpi-note">
-            Tu nivel de consumo permite evaluar un sistema optimizado para ahorro base y respaldo inteligente.
-          </p>
-        </template>
-        <template v-else>
-          <p class="plan-kpi-label">{{ narration.primaryKpiLabel }}</p>
-          <p
-            v-if="monthlySavingsUi.kind === 'amount' || monthlySavingsUi.kind === 'range'"
-            class="plan-kpi-value"
-          >
-            {{ monthlySavingsUi.kind === 'amount' ? monthlySavingsUi.text : monthlySavingsUi.main }}
-          </p>
-          <p v-else class="plan-kpi-value plan-kpi-value--soft">—</p>
-          <p class="plan-kpi-unit">al mes</p>
-          <p v-if="monthlySavingsUi.kind === 'range' && monthlySavingsUi.sub" class="plan-kpi-range">
-            {{ monthlySavingsUi.sub }}
-          </p>
-          <p
-            v-if="visualPriority === 'continuity' && (monthlySavingsUi.kind === 'amount' || monthlySavingsUi.kind === 'range')"
-            class="plan-kpi-complement"
-          >
-            Beneficio de ahorro referencial, complementario a la continuidad energética.
-          </p>
-          <p
-            v-if="visualPriority === 'coverage' && (monthlySavingsUi.kind === 'amount' || monthlySavingsUi.kind === 'range')"
-            class="plan-kpi-complement"
-          >
-            Complementario a cobertura y autonomía referencial en campo o parcela.
-          </p>
-        </template>
-      </section>
-
-      <p
-        v-if="annualSavingsHero"
-        class="plan-slot plan-annual animate"
-        :style="{ order: slotOrder.annual }"
-      >
-        Equivale a aprox. <strong>{{ annualSavingsHero }}</strong> al año
-      </p>
-
-      <section class="plan-slot plan-compare animate" :style="{ order: slotOrder.compare }">
+      <!-- 6. Impacto en boleta + beneficio mensual -->
+      <section class="plan-slot plan-impact animate" :style="{ order: PLAN_ORDER.impact }">
+        <h3 class="plan-section-title">Impacto estimado en tu boleta</h3>
         <div class="plan-cards">
           <div class="plan-card">
             <span class="plan-card-label">{{ referenceBillLabel }}</span>
             <span class="plan-card-val">{{ referenceBillDisplay }}</span>
           </div>
           <div class="plan-card plan-card--solar">
-            <span class="plan-card-label">Escenario con solar</span>
+            <span class="plan-card-label">Escenario con infraestructura solar</span>
             <span class="plan-card-val">{{ solarBillDisplay }}</span>
             <span class="plan-card-hint">Valor referencial sujeto a evaluación técnica.</span>
           </div>
@@ -464,15 +450,72 @@ const waHref = computed(() => {
           </div>
         </div>
         <p v-else class="plan-bar-fallback">
-          Comparación visual cuando haya datos de boleta de referencia y escenario solar.
+          Comparación visual cuando haya boleta de referencia y escenario con infraestructura solar.
         </p>
+
+        <div
+          class="plan-kpi plan-kpi--in-impact"
+          :class="{ 'plan-kpi--secondary': visualPriority !== 'savings' }"
+        >
+          <template v-if="monthlySavingsUi.kind === 'lowConsumption'">
+            <p class="plan-kpi-label">Beneficio mensual referencial</p>
+            <p class="plan-kpi-note">
+              Tu perfil permite evaluar una configuración energética prudente, con foco en eficiencia y espacio técnico
+              para continuidad futura.
+            </p>
+          </template>
+          <template v-else>
+            <p class="plan-kpi-label">{{ narration.primaryKpiLabel }}</p>
+            <p
+              v-if="monthlySavingsUi.kind === 'amount' || monthlySavingsUi.kind === 'range'"
+              class="plan-kpi-value"
+            >
+              {{ monthlySavingsUi.kind === 'amount' ? monthlySavingsUi.text : monthlySavingsUi.main }}
+            </p>
+            <p v-else class="plan-kpi-value plan-kpi-value--soft">—</p>
+            <p class="plan-kpi-unit">al mes (referencial)</p>
+            <p v-if="monthlySavingsUi.kind === 'range' && monthlySavingsUi.sub" class="plan-kpi-range">
+              {{ monthlySavingsUi.sub }}
+            </p>
+            <p
+              v-if="visualPriority === 'continuity' && (monthlySavingsUi.kind === 'amount' || monthlySavingsUi.kind === 'range')"
+              class="plan-kpi-complement"
+            >
+              Beneficio financiero complementario a la continuidad operacional.
+            </p>
+            <p
+              v-if="visualPriority === 'coverage' && (monthlySavingsUi.kind === 'amount' || monthlySavingsUi.kind === 'range')"
+              class="plan-kpi-complement"
+            >
+              Complementario a cobertura y autonomía referencial en campo o parcela.
+            </p>
+          </template>
+        </div>
       </section>
 
+      <!-- 7. ROI referencial -->
+      <section
+        v-if="roiReferentialUi"
+        class="plan-slot plan-roi animate"
+        :style="{ order: PLAN_ORDER.roi }"
+      >
+        <h3 class="plan-section-title">ROI referencial</h3>
+        <p v-if="annualSavingsHero" class="plan-roi-annual">
+          Beneficio financiero referencial: aprox. <strong>{{ annualSavingsHero }}</strong> al año por menor costo
+          de energía.
+        </p>
+        <p class="plan-roi-range-line">{{ roiReferentialUi.rangeLine }}</p>
+        <p v-if="roiReferentialUi.financialLongTermNote" class="plan-roi-note">{{ roiReferentialUi.financialLongTermNote }}</p>
+        <p class="plan-roi-note plan-roi-note--continuity">{{ roiReferentialUi.continuityNote }}</p>
+      </section>
+
+      <!-- Detalle de consumo / dimensionamiento (si hay boleta de referencia) -->
       <div
         v-if="narrativeBillFormatted"
         class="plan-slot plan-narrative animate"
-        :style="{ order: slotOrder.narrative }"
+        :style="{ order: PLAN_ORDER.narrative }"
       >
+        <h3 class="plan-section-title plan-section-title--compact">Contexto de consumo declarado</h3>
         <p v-if="declaredMonthlyBill != null" class="plan-narr-line">
           Con una boleta declarada de <strong class="plan-narr-num">{{ narrativeBillFormatted }}</strong>,
         </p>
@@ -483,90 +526,43 @@ const waHref = computed(() => {
 
         <template v-if="showNarrativeSpecs">
           <template v-if="narrativeKwpStr != null || narrativePanelsN != null">
-            <p class="plan-narr-callout">Estimamos un sistema cercano a:</p>
-            <ul class="plan-narr-specs" aria-label="Tamaño de sistema estimado">
+            <p class="plan-narr-callout">Consistencia con la configuración técnica sugerida</p>
+            <ul class="plan-narr-specs" aria-label="Dimensionamiento referencial">
               <li v-if="narrativeKwpStr != null" class="plan-narr-spec">
                 <span class="plan-narr-ico" aria-hidden="true">☀️</span>
                 <span><strong>{{ narrativeKwpStr }} kWp</strong></span>
               </li>
               <li v-if="narrativePanelsN != null" class="plan-narr-spec">
-                <span class="plan-narr-ico" aria-hidden="true">🔋</span>
-                <span><strong>{{ narrativePanelsN }} paneles solares</strong></span>
+                <span class="plan-narr-ico" aria-hidden="true">⚡</span>
+                <span><strong>{{ narrativePanelsN }} módulos fotovoltaicos</strong></span>
               </li>
             </ul>
           </template>
           <p v-else class="plan-narr-fallback">
-            Solutimp Energy podría dimensionar un sistema solar acorde a tu perfil y consumo.
+            Solutimp Energy puede dimensionar una configuración energética acorde a tu perfil, techumbre y consumo.
           </p>
         </template>
-
-        <div v-if="narrativeRoiBlock" class="plan-narr-roi">
-          <p class="plan-narr-roi-line">Esto podría ayudarte a recuperar tu inversión</p>
-          <p class="plan-narr-roi-line">
-            en aproximadamente <strong class="plan-narr-num">{{ narrativeRoiBlock.roiStr }} años</strong>.
-          </p>
-          <p v-if="narrativeRoiBlock.lifeLine" class="plan-narr-roi-life">{{ narrativeRoiBlock.lifeLine }}</p>
-        </div>
       </div>
-
-      <div
-        v-if="showSistemaOrphan"
-        class="plan-slot plan-system animate"
-        :style="{ order: slotOrder.sistemaOrphan }"
-      >
-        {{ systemTeaser }}
-      </div>
-
-      <!-- Ahorro primero: respaldo complementario al final -->
-      <section
-        v-if="visualPriority === 'savings'"
-        class="plan-slot plan-backup plan-backup--subtle animate"
-        :style="{ order: slotOrder.backupLate }"
-      >
-        <h3 class="plan-backup-title">{{ narration.backupTitle }}</h3>
-        <p class="plan-backup-lead">{{ narration.backupCopy }}</p>
-        <h4 class="plan-systems-heading">Sistemas que podrías proteger</h4>
-        <ul class="plan-chip-list" aria-label="Ejemplos de cargas críticas">
-          <li v-for="(c, i) in narration.protectedLoadChips" :key="i" class="plan-chip">
-            <span class="plan-chip-ico" aria-hidden="true">✓</span>{{ c }}
-          </li>
-        </ul>
-        <p class="plan-backup-foot">{{ narration.backupFootDisclaimer }}</p>
-      </section>
-
-      <!-- Cobertura: respaldo complementario -->
-      <section
-        v-if="visualPriority === 'coverage'"
-        class="plan-slot plan-backup plan-backup--subtle animate"
-        :style="{ order: slotOrder.backupLate }"
-      >
-        <h3 class="plan-backup-title">Respaldo complementario</h3>
-        <p class="plan-backup-lead">{{ narration.backupCopy }}</p>
-        <h4 class="plan-systems-heading">Ejemplos de cargas</h4>
-        <ul class="plan-chip-list" aria-label="Ejemplos de cargas críticas">
-          <li v-for="(c, i) in narration.protectedLoadChips" :key="i" class="plan-chip">
-            <span class="plan-chip-ico" aria-hidden="true">✓</span>{{ c }}
-          </li>
-        </ul>
-        <p class="plan-backup-foot">{{ narration.backupFootDisclaimer }}</p>
-      </section>
     </div>
 
     <div class="plan-badges animate" style="animation-delay: 0.16s">
-      <span class="badge badge--main">Solutimp Energy · Tecnología solar + respaldo inteligente</span>
+      <span class="badge badge--main">Solutimp Energy · Infraestructura energética inteligente + continuidad operacional</span>
       <span class="badge badge--gw">Powered by GoodWe</span>
     </div>
 
     <p class="plan-disclaimer animate" style="animation-delay: 0.18s">
       {{ narration.planDisclaimer }}
     </p>
+    <p class="plan-disclaimer plan-disclaimer--legal animate" style="animation-delay: 0.181s">
+      {{ RESULT_LEGAL_DISCLAIMER }}
+    </p>
 
     <p class="plan-social animate" style="animation-delay: 0.185s">
-      Evaluación preliminar · Solutimp Energy · Ingeniería energética aplicada, automatización y respaldo inteligente
+      Evaluación de autonomía energética · Ingeniería aplicada, integración y resiliencia operacional
     </p>
 
     <p class="plan-mail animate" style="animation-delay: 0.2s">
-      También puedes solicitar cotización por correo:
+      También puedes solicitar una revisión técnica por correo:
       <a href="mailto:info@solutimp.cl">info@solutimp.cl</a>
     </p>
 
@@ -909,6 +905,190 @@ const waHref = computed(() => {
   max-width: 22rem;
   margin-left: auto;
   margin-right: auto;
+}
+
+.plan-kicker {
+  margin: 0.35rem 0 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.plan-section-title {
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #7dd3fc;
+}
+
+.plan-section-title--compact {
+  margin-bottom: 0.5rem;
+}
+
+.plan-tech {
+  text-align: center;
+  padding: 1rem 0.85rem 1.1rem;
+  border-radius: var(--se-radius-md);
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--plan-border);
+}
+
+.plan-tech-lead {
+  margin: 0 0 0.75rem;
+  font-size: 0.88rem;
+  color: #b8c5d9;
+  line-height: 1.5;
+}
+
+.plan-invest {
+  text-align: center;
+  padding: 1rem 0.85rem 1.1rem;
+  border-radius: var(--se-radius-md);
+  background: linear-gradient(145deg, rgba(56, 189, 248, 0.08) 0%, rgba(0, 0, 0, 0.12) 55%);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.plan-invest-line {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.05rem, 3.8vw, 1.25rem);
+  font-weight: 700;
+  color: #f1f5f9;
+  line-height: 1.35;
+}
+
+.plan-invest-line--soft {
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.plan-invest-sub {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: #8899af;
+}
+
+.plan-continuity {
+  margin-bottom: 1rem;
+  padding: 1.1rem 1rem 1.05rem;
+  border-radius: var(--se-radius-md);
+  background: var(--plan-surface);
+  border: 1px solid var(--plan-border);
+}
+
+.plan-continuity--accent {
+  border-color: rgba(94, 234, 212, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(94, 234, 212, 0.12),
+    0 12px 36px rgba(0, 0, 0, 0.25);
+  background: linear-gradient(145deg, rgba(94, 234, 212, 0.08) 0%, rgba(0, 0, 0, 0.12) 55%);
+}
+
+.plan-continuity-keyline {
+  margin: 0 0 0.35rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.plan-continuity-subtitle {
+  margin: 0.85rem 0 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5eead4;
+}
+
+.plan-outage-list {
+  list-style: none;
+  margin: 0 0 0.85rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.plan-outage-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #cbd5e1;
+}
+
+.plan-outage-item--partial,
+.plan-outage-item--caution {
+  color: #fcd34d;
+}
+
+.plan-outage-ico {
+  flex-shrink: 0;
+  line-height: 1.35;
+}
+
+.plan-autonomy--embed {
+  margin-bottom: 0.85rem;
+}
+
+.plan-impact {
+  padding: 0.25rem 0 0.35rem;
+}
+
+.plan-kpi--in-impact {
+  margin-top: 1rem;
+  border-radius: var(--se-radius-md);
+  padding: 1rem 0.75rem 1.1rem;
+  background: rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.plan-roi {
+  text-align: center;
+  padding: 1rem 0.85rem 1.15rem;
+  border-radius: var(--se-radius-md);
+  background: rgba(0, 0, 0, 0.16);
+  border: 1px solid var(--plan-border);
+}
+
+.plan-roi-annual {
+  margin: 0 0 0.65rem;
+  font-size: 0.88rem;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
+.plan-roi-range-line {
+  margin: 0 0 0.55rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  line-height: 1.45;
+}
+
+.plan-roi-note {
+  margin: 0.45rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #94a3b8;
+}
+
+.plan-roi-note--continuity {
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.plan-disclaimer--legal {
+  margin-top: 0.35rem;
+  font-size: 0.76rem;
+  color: #7c8ca0;
 }
 
 .plan-kpi {
