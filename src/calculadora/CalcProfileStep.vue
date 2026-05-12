@@ -23,7 +23,7 @@ const goalOptions: { value: Exclude<CalcMainGoal, ''>; label: string; icon: stri
 ]
 
 function billDisplay(): string {
-  return formatCLP(flow.monthlyBillAmount.value)
+  return formatCLP(flow.monthlyBillAmount)
 }
 
 function onSliderInput(e: Event) {

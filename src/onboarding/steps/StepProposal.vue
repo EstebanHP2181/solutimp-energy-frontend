@@ -84,6 +84,10 @@ const cuAnnual = useCountUp(850)
 const cuLifetime = useCountUp(900)
 const cuAvgMonthly = useCountUp(800)
 
+const cuAvgMonthlyDisplayCLP = computed(() => formatCLP(cuAvgMonthly.display.value))
+const cuAnnualDisplayCLP = computed(() => formatCLP(cuAnnual.display.value))
+const cuLifetimeDisplayCLP = computed(() => formatCLP(cuLifetime.display.value))
+
 watch(monthlyAvgSavings, (avg) => {
   if (avg != null && avg > 0) {
     cuAvgMonthly.start(avg)
@@ -241,7 +245,7 @@ function onModalKeydown(e: KeyboardEvent) {
         <div class="ruuf-avg">
           <span class="ruuf-avg-label">Ahorro mensual promedio</span>
           <span class="ruuf-avg-num">{{
-            monthlyAvgSavings != null ? formatCLP(cuAvgMonthly.display) : 'Sujeto a medición'
+            monthlyAvgSavings != null ? cuAvgMonthlyDisplayCLP : 'Sujeto a medición'
           }}</span>
         </div>
       </div>
@@ -263,9 +267,7 @@ function onModalKeydown(e: KeyboardEvent) {
       <div class="ruuf-grid4">
         <div class="ruuf-mcard card-hover" data-io>
           <span class="ruuf-mcard-l">Ahorro anual</span>
-          <span class="ruuf-mcard-v">{{
-            econ?.annual_savings != null ? formatCLP(cuAnnual.display) : '—'
-          }}</span>
+          <span class="ruuf-mcard-v">{{ econ?.annual_savings != null ? cuAnnualDisplayCLP : '—' }}</span>
         </div>
         <div class="ruuf-mcard card-hover" data-io>
           <span class="ruuf-mcard-l">Retorno estimado</span>
@@ -277,9 +279,7 @@ function onModalKeydown(e: KeyboardEvent) {
         </div>
         <div class="ruuf-mcard card-hover" data-io>
           <span class="ruuf-mcard-l">Ahorro 25 años</span>
-          <span class="ruuf-mcard-v">{{
-            econ?.lifetime_savings_25y != null ? formatCLP(cuLifetime.display) : '—'
-          }}</span>
+          <span class="ruuf-mcard-v">{{ econ?.lifetime_savings_25y != null ? cuLifetimeDisplayCLP : '—' }}</span>
         </div>
         <div class="ruuf-mcard card-hover" data-io>
           <span class="ruuf-mcard-l">Sistema</span>

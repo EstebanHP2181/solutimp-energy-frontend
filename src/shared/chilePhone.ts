@@ -34,32 +34,29 @@ export function isValidChileMobileE164(phone: string): boolean {
 }
 
 export function getChileMobileValidationError(input: string): string | null {
-  const d = input.replace(/[\s\-().]/g, '').replace(/\D/g, '')
+  if (typeof input !== 'string' || input.trim() === '') return null
+
+  const d = input.replace(/\D/g, '')
   if (d.length === 0) return null
 
-  const n = normalizeChileMobileInput(input)
-  if (isValidChileMobileE164(n)) return null
-
   if (d.startsWith('569')) {
-    if (d.length > 11) return 'Demasiados dígitos. El formato es +56 9 y 8 dígitos.'
-    if (d.length < 11) return 'Faltan dígitos. Tras 569 deben ir 8 dígitos.'
-    return 'Número de celular no válido.'
+    const rest = d.slice(3)
+    if (rest.length < 8) return 'Faltan dígitos para completar el celular chileno.'
+    if (rest.length > 8) return 'Demasiados dígitos para un celular chileno.'
+    const n = `${CHILE_MOBILE_PREFIX}${rest}`
+    return isValidChileMobileE164(n) ? null : 'Ingresa un celular chileno válido.'
   }
 
-  if (/^9\d{8}$/.test(d)) {
-    return 'Número de celular no válido.'
+  // 9 dígitos: solo válido como móvil nacional 9 + 8 (cualquier otro caso = demasiados para “solo abonado”)
+  if (d.length === 9) {
+    return /^9\d{8}$/.test(d) ? null : 'Demasiados dígitos para un celular chileno.'
   }
 
-  if (d.length > 8) {
-    return 'Demasiados dígitos. Ingresa 8 dígitos o pega el número completo con +569.'
-  }
-  if (d.length < 8) {
-    return 'Faltan dígitos. El celular tiene 8 dígitos después del +569.'
-  }
-  if (/^0/.test(d)) {
-    return 'El número no puede empezar con 0.'
-  }
-  return 'Número de celular no válido.'
+  if (d.length > 8) return 'Demasiados dígitos para un celular chileno.'
+  if (d.length < 8) return 'Faltan dígitos para completar el celular chileno.'
+
+  const n = normalizeChileMobileInput(input)
+  return isValidChileMobileE164(n) ? null : 'Ingresa un celular chileno válido.'
 }
 
 /** Solo dígitos, máximo 8 (campo “solo abonado” / onboarding). */

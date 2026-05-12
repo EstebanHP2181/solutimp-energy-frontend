@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { sanitizeChileMobileDigits8 } from '@/shared/chilePhone'
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     modelValue: string
     inputId: string
