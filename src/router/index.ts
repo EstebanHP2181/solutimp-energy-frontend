@@ -11,7 +11,7 @@ const router = createRouter({
           path: '',
           name: 'home',
           component: () => import('@/pages/LandingPage.vue'),
-          meta: { title: 'SOLUTIMP ENERGY' },
+          meta: { title: 'Infraestructura energética' },
         },
         {
           path: 'onboarding',
