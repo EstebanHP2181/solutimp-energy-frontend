@@ -1,13 +1,20 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { DEFAULT_LOADING_MESSAGES } from '@/calculadora/narrativeEngine'
 
-const MESSAGES = [
-  'Analizando radiación solar estimada…',
-  'Estimando curva de consumo energético…',
-  'Evaluando infraestructura crítica…',
-  'Optimizando autonomía híbrida…',
-  'Generando diagnóstico energético…',
-] as const
+const props = withDefaults(
+  defineProps<{
+    headline: string
+    subcopy: string
+    messages: readonly string[]
+  }>(),
+  {
+    headline: 'Tu hogar sigue funcionando',
+    subcopy:
+      'Estamos preparando una preevaluación de ahorro, respaldo y continuidad energética.',
+    messages: () => [...DEFAULT_LOADING_MESSAGES],
+  }
+)
 
 /** Ciclo de mensajes: 600–800 ms para sensación orgánica con el fade. */
 const ROTATE_MS = 700
@@ -16,19 +23,44 @@ const idx = ref(0)
 const reduceMotion = ref(false)
 let timer: ReturnType<typeof setInterval> | null = null
 
-const line = computed(() => MESSAGES[idx.value % MESSAGES.length])
+const list = computed(() => (props.messages.length > 0 ? props.messages : DEFAULT_LOADING_MESSAGES))
+
+const line = computed(() => {
+  const L = list.value
+  if (!L.length) return ''
+  return L[idx.value % L.length] ?? ''
+})
 
 function tick() {
-  idx.value = (idx.value + 1) % MESSAGES.length
+  const L = list.value
+  if (!L.length) return
+  idx.value = (idx.value + 1) % L.length
 }
+
+function startTimer() {
+  if (timer != null) {
+    clearInterval(timer)
+    timer = null
+  }
+  if (!reduceMotion.value && list.value.length > 1) {
+    timer = setInterval(tick, ROTATE_MS)
+  }
+}
+
+watch(
+  () => [props.headline, props.subcopy, props.messages] as const,
+  () => {
+    idx.value = 0
+    startTimer()
+  },
+  { deep: true }
+)
 
 onMounted(() => {
   if (typeof matchMedia !== 'undefined') {
     reduceMotion.value = matchMedia('(prefers-reduced-motion: reduce)').matches
   }
-  if (!reduceMotion.value) {
-    timer = setInterval(tick, ROTATE_MS)
-  }
+  startTimer()
 })
 
 onUnmounted(() => {
@@ -50,13 +82,11 @@ onUnmounted(() => {
 
     <div class="eal-inner">
       <p class="eal-logo eal-logo--breathe" aria-hidden="true">S⚡E</p>
-      <p class="eal-head">Tu hogar sigue funcionando</p>
-      <p class="eal-sub">
-        Estamos preparando una preevaluación de ahorro, respaldo y continuidad energética.
-      </p>
+      <p class="eal-head">{{ headline }}</p>
+      <p class="eal-sub">{{ subcopy }}</p>
       <div class="eal-line-wrap">
         <Transition name="eal-fade" mode="out-in">
-          <p :key="idx" class="eal-line">{{ line }}</p>
+          <p :key="idx + '-' + line" class="eal-line">{{ line }}</p>
         </Transition>
       </div>
     </div>

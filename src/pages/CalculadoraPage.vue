@@ -13,6 +13,7 @@ import {
   CALC_POST_HERO_STEPS,
   useCalculadoraFlow,
 } from '@/composables/useCalculadoraFlow'
+import { getEnergyNarrativeContext } from '@/calculadora/narrativeEngine'
 import { readUtmsFromQuery } from '@/shared/utmQuery'
 import { saveUtmsToSession } from '@/shared/utmSession'
 
@@ -38,6 +39,13 @@ const stepComponent = computed(() => {
 })
 
 const showBack = computed(() => !showHero.value && flow.postHeroStep > 0)
+
+const narrativeForLoading = computed(() =>
+  getEnergyNarrativeContext({
+    propertyType: flow.propertyType,
+    mainGoal: flow.mainGoal,
+  })
+)
 </script>
 
 <template>
@@ -55,7 +63,12 @@ const showBack = computed(() => !showHero.value && flow.postHeroStep > 0)
       >
         <component :is="stepComponent" />
       </WizardShell>
-      <EnergyAnalysisLoading v-if="!showHero && flow.analysisPhase" />
+      <EnergyAnalysisLoading
+        v-if="!showHero && flow.analysisPhase"
+        :headline="narrativeForLoading.loadingHeadline"
+        :subcopy="narrativeForLoading.loadingSubcopy"
+        :messages="narrativeForLoading.loadingMessages"
+      />
     </div>
   </div>
 </template>

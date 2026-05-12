@@ -1,11 +1,21 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue'
 import { calculadoraFlowKey } from '@/composables/useCalculadoraFlow'
+import { getEnergyNarrativeContext } from '@/calculadora/narrativeEngine'
 import { formatCLP } from '@/shared/formatCLP'
 import { buildWhatsAppLink } from '@/shared/whatsapp'
 import CalcContactBlock from './CalcContactBlock.vue'
 
 const flow = inject(calculadoraFlowKey)!
+
+const narration = computed(() =>
+  getEnergyNarrativeContext({
+    propertyType: flow.propertyType,
+    mainGoal: flow.mainGoal,
+  })
+)
+
+const continuityFirst = computed(() => narration.value.primaryKpiMode !== 'savings')
 
 const sim = computed(() => flow.simulationResult)
 const econ = computed(() => sim.value?.economics)
@@ -160,8 +170,6 @@ const compareBar = computed(() => {
   return { newPct, savingsPct, hasData: true as const }
 })
 
-const backupChips = ['Portón automático', 'CCTV / cámaras', 'Router / WiFi', 'Iluminación crítica']
-
 const waHref = computed(() => {
   const dec = declaredMonthlyBill.value
   const sol = solarBill.value
@@ -185,6 +193,7 @@ const waHref = computed(() => {
       ? `, con ahorro anual aproximado de ${formatCLP(Math.round(ann))}`
       : ` Ahorro anual aproximado de ${formatCLP(Math.round(ann))}`
   }
+  body += ' ' + narration.value.whatsappIntentLine
   body += ' Quiero que un especialista revise mi caso.'
   return buildWhatsAppLink(body)
 })
@@ -193,47 +202,85 @@ const waHref = computed(() => {
 <template>
   <div class="plan">
     <header class="plan-head animate">
-      <p class="plan-eyebrow">Plan de independencia energética</p>
-      <h2 class="plan-title">Tu estimación en un vistazo</h2>
+      <p class="plan-eyebrow">{{ narration.resultSubtitle }}</p>
+      <h2 class="plan-title">{{ narration.resultTitle }}</h2>
+      <p v-if="narration.mainClaim" class="plan-claim">{{ narration.mainClaim }}</p>
     </header>
 
-    <section class="plan-kpi animate" style="animation-delay: 0.05s">
-      <template v-if="monthlySavingsUi.kind === 'lowConsumption'">
-        <p class="plan-kpi-label">Ahorro mensual estimado</p>
-        <p class="plan-kpi-note">
-          Tu nivel de consumo permite evaluar un sistema optimizado para ahorro base y respaldo inteligente.
-        </p>
-      </template>
-      <template v-else>
-        <p class="plan-kpi-label">Podrías dejar de pagar aprox.</p>
-        <p
-          v-if="monthlySavingsUi.kind === 'amount' || monthlySavingsUi.kind === 'range'"
-          class="plan-kpi-value"
-        >
-          {{ monthlySavingsUi.kind === 'amount' ? monthlySavingsUi.text : monthlySavingsUi.main }}
-        </p>
-        <p v-else class="plan-kpi-value plan-kpi-value--soft">—</p>
-        <p class="plan-kpi-unit">al mes</p>
-        <p v-if="monthlySavingsUi.kind === 'range' && monthlySavingsUi.sub" class="plan-kpi-range">
-          {{ monthlySavingsUi.sub }}
-        </p>
-      </template>
-    </section>
+    <template v-if="continuityFirst">
+      <section class="plan-backup plan-backup--prominent animate" style="animation-delay: 0.05s">
+        <h3 class="plan-backup-title">{{ narration.backupTitle }}</h3>
+        <p class="plan-backup-lead">{{ narration.backupCopy }}</p>
+        <ul class="plan-chip-list" aria-label="Ejemplos de cargas críticas">
+          <li v-for="(c, i) in narration.protectedLoadChips" :key="i" class="plan-chip">
+            <span class="plan-chip-ico" aria-hidden="true">✓</span>{{ c }}
+          </li>
+        </ul>
+        <p class="plan-backup-foot">{{ narration.backupFootDisclaimer }}</p>
+      </section>
 
-    <section class="plan-backup plan-backup--prominent animate" style="animation-delay: 0.08s">
-      <h3 class="plan-backup-title">Respaldo inteligente Solutimp</h3>
-      <p class="plan-backup-lead">
-        Además del ahorro, Solutimp Energy puede ayudarte a mantener operativas tus cargas críticas ante cortes de luz.
-      </p>
-      <ul class="plan-chip-list" aria-label="Ejemplos de cargas críticas">
-        <li v-for="(c, i) in backupChips" :key="i" class="plan-chip">
-          <span class="plan-chip-ico" aria-hidden="true">✓</span>{{ c }}
-        </li>
-      </ul>
-      <p class="plan-backup-foot">
-        La autonomía real depende de batería, consumo y configuración final.
-      </p>
-    </section>
+      <section class="plan-kpi animate" style="animation-delay: 0.08s">
+        <template v-if="monthlySavingsUi.kind === 'lowConsumption'">
+          <p class="plan-kpi-label">Ahorro mensual referencial</p>
+          <p class="plan-kpi-note">
+            Tu nivel de consumo permite evaluar un sistema optimizado para ahorro base y respaldo inteligente.
+          </p>
+        </template>
+        <template v-else>
+          <p class="plan-kpi-label">{{ narration.primaryKpiLabel }}</p>
+          <p
+            v-if="monthlySavingsUi.kind === 'amount' || monthlySavingsUi.kind === 'range'"
+            class="plan-kpi-value"
+          >
+            {{ monthlySavingsUi.kind === 'amount' ? monthlySavingsUi.text : monthlySavingsUi.main }}
+          </p>
+          <p v-else class="plan-kpi-value plan-kpi-value--soft">—</p>
+          <p class="plan-kpi-unit">al mes</p>
+          <p v-if="monthlySavingsUi.kind === 'range' && monthlySavingsUi.sub" class="plan-kpi-range">
+            {{ monthlySavingsUi.sub }}
+          </p>
+          <p v-if="monthlySavingsUi.kind === 'amount' || monthlySavingsUi.kind === 'range'" class="plan-kpi-complement">
+            Beneficio de ahorro referencial, complementario a la continuidad energética.
+          </p>
+        </template>
+      </section>
+    </template>
+
+    <template v-else>
+      <section class="plan-kpi animate" style="animation-delay: 0.05s">
+        <template v-if="monthlySavingsUi.kind === 'lowConsumption'">
+          <p class="plan-kpi-label">Ahorro mensual estimado</p>
+          <p class="plan-kpi-note">
+            Tu nivel de consumo permite evaluar un sistema optimizado para ahorro base y respaldo inteligente.
+          </p>
+        </template>
+        <template v-else>
+          <p class="plan-kpi-label">{{ narration.primaryKpiLabel }}</p>
+          <p
+            v-if="monthlySavingsUi.kind === 'amount' || monthlySavingsUi.kind === 'range'"
+            class="plan-kpi-value"
+          >
+            {{ monthlySavingsUi.kind === 'amount' ? monthlySavingsUi.text : monthlySavingsUi.main }}
+          </p>
+          <p v-else class="plan-kpi-value plan-kpi-value--soft">—</p>
+          <p class="plan-kpi-unit">al mes</p>
+          <p v-if="monthlySavingsUi.kind === 'range' && monthlySavingsUi.sub" class="plan-kpi-range">
+            {{ monthlySavingsUi.sub }}
+          </p>
+        </template>
+      </section>
+
+      <section class="plan-backup plan-backup--prominent animate" style="animation-delay: 0.08s">
+        <h3 class="plan-backup-title">{{ narration.backupTitle }}</h3>
+        <p class="plan-backup-lead">{{ narration.backupCopy }}</p>
+        <ul class="plan-chip-list" aria-label="Ejemplos de cargas críticas">
+          <li v-for="(c, i) in narration.protectedLoadChips" :key="i" class="plan-chip">
+            <span class="plan-chip-ico" aria-hidden="true">✓</span>{{ c }}
+          </li>
+        </ul>
+        <p class="plan-backup-foot">{{ narration.backupFootDisclaimer }}</p>
+      </section>
+    </template>
 
     <p v-if="annualSavingsHero" class="plan-annual animate" style="animation-delay: 0.1s">
       Equivale a aprox. <strong>{{ annualSavingsHero }}</strong> al año
@@ -246,7 +293,7 @@ const waHref = computed(() => {
       <p v-else class="plan-narr-line">
         Con una boleta de referencia de <strong class="plan-narr-num">{{ narrativeBillFormatted }}</strong>,
       </p>
-      <p class="plan-narr-sub">Estimamos un consumo residencial acorde a ese nivel.</p>
+      <p class="plan-narr-sub">{{ narration.narrativeConsumptionHint }}</p>
 
       <template v-if="narrativeKwpStr != null || narrativePanelsN != null">
         <p class="plan-narr-callout">Estimamos un sistema cercano a:</p>
@@ -310,7 +357,7 @@ const waHref = computed(() => {
     </div>
 
     <p class="plan-disclaimer animate" style="animation-delay: 0.18s">
-      Estimación preliminar. Un especialista Solutimp puede validar tu techo, consumo real y respaldo ideal.
+      {{ narration.planDisclaimer }}
     </p>
 
     <p class="plan-social animate" style="animation-delay: 0.185s">
@@ -323,7 +370,7 @@ const waHref = computed(() => {
     </p>
 
     <div class="plan-wa-desktop animate" style="animation-delay: 0.2s">
-      <a class="wa-btn" :href="waHref" target="_blank" rel="noopener noreferrer">Hablar por WhatsApp</a>
+      <a class="wa-btn" :href="waHref" target="_blank" rel="noopener noreferrer">{{ narration.ctaLabel }}</a>
     </div>
 
     <div class="plan-form animate" style="animation-delay: 0.22s">
@@ -331,7 +378,7 @@ const waHref = computed(() => {
     </div>
 
     <div class="wa-sticky hidden-md-up" role="region" aria-label="Contacto WhatsApp">
-      <a class="wa-sticky-btn" :href="waHref" target="_blank" rel="noopener noreferrer">Hablar por WhatsApp</a>
+      <a class="wa-sticky-btn" :href="waHref" target="_blank" rel="noopener noreferrer">{{ narration.ctaLabel }}</a>
     </div>
   </div>
 </template>
@@ -400,6 +447,17 @@ const waHref = computed(() => {
   color: #fff;
 }
 
+.plan-claim {
+  margin: 0.45rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #b8c5d9;
+  max-width: 22rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .plan-kpi {
   text-align: center;
   padding: 1.25rem 0.85rem 1.35rem;
@@ -453,6 +511,13 @@ const waHref = computed(() => {
   margin: 0.65rem 0 0;
   font-size: 0.82rem;
   color: #94a3b8;
+}
+
+.plan-kpi-complement {
+  margin: 0.75rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #8899af;
 }
 
 .plan-annual {
