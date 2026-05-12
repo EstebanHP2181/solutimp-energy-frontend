@@ -5,6 +5,7 @@ import {
   AUTONOMY_RANGE_DISCLAIMER,
   getEnergyNarrativeContext,
 } from '@/calculadora/narrativeEngine'
+import { getRoofFeasibilityCopy } from '@/calculadora/roofFeasibilityEngine'
 import { formatCLP } from '@/shared/formatCLP'
 import { buildWhatsAppLink } from '@/shared/whatsapp'
 import CalcContactBlock from './CalcContactBlock.vue'
@@ -49,6 +50,7 @@ const slotOrder = computed(() => {
     return {
       backupEarly: 10,
       autonomy: 20,
+      roof: 25,
       savings: 30,
       annual: 35,
       compare: 40,
@@ -63,6 +65,7 @@ const slotOrder = computed(() => {
     return {
       coverage: 10,
       sistema: 20,
+      roof: 25,
       savings: 30,
       annual: 35,
       compare: 40,
@@ -78,6 +81,7 @@ const slotOrder = computed(() => {
     annual: 15,
     compare: 20,
     narrative: 30,
+    roof: 31,
     sistemaOrphan: 35,
     backupLate: 40,
     backupEarly: 99,
@@ -239,6 +243,13 @@ const showSistemaOrphan = computed(
   () => !narrativeBillFormatted.value && !!systemTeaser.value && visualPriority.value !== 'coverage'
 )
 
+const roofFeasibilityCopy = computed(() =>
+  getRoofFeasibilityCopy({
+    panelCount: narrativePanelsN.value,
+    propertyType: flow.propertyType,
+  })
+)
+
 /** Barra: ancla = boleta de referencia (declarada o estimada); segmentos = nueva boleta + ahorro. */
 const compareBar = computed(() => {
   const cur = referenceBill.value
@@ -359,6 +370,24 @@ const waHref = computed(() => {
             </li>
           </ul>
         </template>
+      </section>
+
+      <section
+        v-if="roofFeasibilityCopy"
+        class="plan-slot plan-roof animate"
+        :style="{ order: slotOrder.roof }"
+      >
+        <h3 class="plan-roof-title">{{ roofFeasibilityCopy.title }}</h3>
+        <p class="plan-roof-headline">{{ roofFeasibilityCopy.headline }}</p>
+        <p class="plan-roof-context">{{ roofFeasibilityCopy.contextLine }}</p>
+        <p v-if="roofFeasibilityCopy.parkingEquivalence" class="plan-roof-parking">
+          Eso equivale a {{ roofFeasibilityCopy.parkingEquivalence }} (referencia visual).
+        </p>
+        <p class="plan-roof-orient">{{ roofFeasibilityCopy.orientation }}</p>
+        <p v-if="roofFeasibilityCopy.advancedWarning" class="plan-roof-warn" role="status">
+          {{ roofFeasibilityCopy.advancedWarning }}
+        </p>
+        <p class="plan-roof-foot">{{ roofFeasibilityCopy.disclaimer }}</p>
       </section>
 
       <!-- Ahorro mensual -->
@@ -680,6 +709,68 @@ const waHref = computed(() => {
   font-size: 0.88rem;
   color: #b8c5d9;
   line-height: 1.5;
+}
+
+.plan-roof {
+  text-align: center;
+  padding: 1rem 0.85rem 1.1rem;
+  border-radius: var(--se-radius-md);
+  background: rgba(14, 165, 233, 0.06);
+  border: 1px solid rgba(14, 165, 233, 0.28);
+}
+
+.plan-roof-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #7dd3fc;
+}
+
+.plan-roof-headline {
+  margin: 0 0 0.45rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #f1f5f9;
+}
+
+.plan-roof-context {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #b8c5d9;
+}
+
+.plan-roof-parking {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.plan-roof-orient {
+  margin: 0 0 0.45rem;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.plan-roof-warn {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #fcd34d;
+}
+
+.plan-roof-foot {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: #8899af;
 }
 
 .plan-autonomy {

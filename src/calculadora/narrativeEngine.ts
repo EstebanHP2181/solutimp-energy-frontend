@@ -42,6 +42,7 @@ export const AUTONOMY_RANGE_DISCLAIMER =
 
 const LOADING_RESIDENTIAL: readonly string[] = [
   'Analizando radiación solar estimada…',
+  'Estimando superficie disponible en techumbre…',
   'Estimando consumo energético del hogar…',
   'Evaluando respaldo para cargas críticas…',
   'Optimizando autonomía híbrida referencial…',
@@ -50,6 +51,7 @@ const LOADING_RESIDENTIAL: readonly string[] = [
 
 const LOADING_COMMERCIAL: readonly string[] = [
   'Analizando continuidad operacional…',
+  'Evaluando cubierta útil para instalación solar…',
   'Estimando demanda energética del negocio…',
   'Evaluando respaldo para refrigeración, seguridad y conectividad…',
   'Optimizando escenario híbrido referencial…',
@@ -58,6 +60,7 @@ const LOADING_COMMERCIAL: readonly string[] = [
 
 const LOADING_INDUSTRIAL: readonly string[] = [
   'Analizando infraestructura crítica…',
+  'Evaluando cubierta útil para instalación solar…',
   'Estimando demanda energética operativa…',
   'Evaluando respaldo para accesos, seguridad y cargas esenciales…',
   'Optimizando continuidad referencial…',
@@ -66,6 +69,7 @@ const LOADING_INDUSTRIAL: readonly string[] = [
 
 const LOADING_AGRI: readonly string[] = [
   'Analizando radiación solar estimada…',
+  'Evaluando superficie disponible para paneles…',
   'Estimando demanda en campo y parcela…',
   'Evaluando respaldo para bombas, accesos y seguridad…',
   'Optimizando autonomía referencial…',
@@ -74,6 +78,7 @@ const LOADING_AGRI: readonly string[] = [
 
 const LOADING_COMMUNITY: readonly string[] = [
   'Analizando radiación solar estimada…',
+  'Evaluando cubierta útil para instalación solar…',
   'Estimando consumo común del condominio…',
   'Evaluando respaldo para áreas críticas…',
   'Generando preevaluación energética…',
