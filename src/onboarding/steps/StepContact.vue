@@ -36,9 +36,9 @@ async function submit() {
 
 <template>
   <div class="step">
-    <h2 class="step-q">Tu evaluación preliminar está lista</h2>
+    <h2 class="step-q">¡Tu propuesta está lista!</h2>
     <p class="step-hint">
-      Déjanos tus datos y un asesor de Solutimp Energy podrá enviarte una propuesta personalizada.
+      Un asesor de Solutimp Energy te contactará en menos de 2 horas hábiles con los detalles de tu evaluación.
     </p>
     <div class="fields">
       <div>

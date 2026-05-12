@@ -9,6 +9,7 @@ import StepPropertyType from '@/onboarding/steps/StepPropertyType.vue'
 import StepConsumption from '@/onboarding/steps/StepConsumption.vue'
 import StepGoal from '@/onboarding/steps/StepGoal.vue'
 import StepRegion from '@/onboarding/steps/StepRegion.vue'
+import StepProposal from '@/onboarding/steps/StepProposal.vue'
 import StepContact from '@/onboarding/steps/StepContact.vue'
 import StepResult from '@/onboarding/steps/StepResult.vue'
 
@@ -27,13 +28,16 @@ const stepComponent = computed(() => {
     StepConsumption,
     StepGoal,
     StepRegion,
+    StepProposal,
     StepContact,
     StepResult,
   ] as const
   return map[wizard.currentStep] ?? StepWelcome
 })
 
-const showBack = computed(() => wizard.currentStep > 0 && wizard.currentStep < 6)
+const showBack = computed(() => wizard.currentStep > 0 && wizard.currentStep < 7)
+
+const shellVariant = computed(() => (wizard.currentStep === 5 ? 'proposal' : 'default'))
 </script>
 
 <template>
@@ -51,6 +55,7 @@ const showBack = computed(() => wizard.currentStep > 0 && wizard.currentStep < 6
           :total-steps="wizard.TOTAL_STEPS"
           :progress-fraction="wizard.progressFraction"
           :show-back="showBack"
+          :variant="shellVariant"
           @back="wizard.back()"
         >
           <component :is="stepComponent" />

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { inject } from 'vue'
+import { computed, inject } from 'vue'
 import { wizardInjectionKey } from '@/composables/useWizard'
+import { formatCLP } from '@/shared/formatCLP'
 
 const w = inject(wizardInjectionKey)!
 
@@ -8,36 +9,65 @@ const firstName = () => {
   const n = w.name.trim().split(/\s+/)[0]
   return n || 'Cliente'
 }
+
+const sim = computed(() => w.simulationResult)
+const econ = computed(() => sim.value?.economics)
+
+const waHref = computed(() => {
+  const who = firstName()
+  const msg = encodeURIComponent(
+    `Hola, soy ${who}. Completé la evaluación SOLUTIMP ENERGY y quiero conversar sobre mi propuesta.`
+  )
+  return `https://wa.me/56222013315?text=${msg}`
+})
+
+const savingsLine = computed(() => {
+  const e = econ.value
+  if (e?.monthly_savings_min != null && e?.monthly_savings_max != null) {
+    return `${formatCLP(e.monthly_savings_min)} – ${formatCLP(e.monthly_savings_max)} / mes estimado`
+  }
+  return 'Ahorro orientativo entre 60% y 80% respecto de tu cuenta actual (sujeto a evaluación técnica)'
+})
+
+const panelsLine = computed(() => {
+  const s = sim.value
+  if (s?.panels != null && s?.power_kwp != null) {
+    return `${s.panels} paneles · ${s.power_kwp} kWp`
+  }
+  return 'Sistema dimensionado según tu perfil'
+})
 </script>
 
 <template>
   <div class="step step-result">
-    <h2 class="step-q">Gracias, {{ firstName() }}. Ya tenemos los datos iniciales.</h2>
+    <h2 class="step-q">Gracias, {{ firstName() }}. Ya tenemos tu solicitud.</h2>
     <p class="step-hint">
-      La siguiente etapa es una <strong>evaluación técnica</strong> y propuesta personalizada. Los valores abajo son
-      orientativos, no cifras finales.
+      Resumen de tu <strong>propuesta preliminar</strong>. Los valores son orientativos hasta la visita técnica.
     </p>
     <div class="cards">
-      <div class="mini se-glass shimmer">
-        <h3>Ahorro estimado</h3>
-        <p>Rango preliminar, sujeto a evaluación técnica y medición real.</p>
+      <div class="mini se-glass">
+        <h3>Ahorro mensual</h3>
+        <p>{{ savingsLine }}</p>
       </div>
       <div class="mini se-glass">
-        <h3>Respaldo</h3>
-        <p>Disponible según configuración y necesidades que indicaste.</p>
+        <h3>Tu sistema</h3>
+        <p>{{ panelsLine }}</p>
+        <p v-if="sim?.panel_model" class="sub">{{ sim.panel_model }}</p>
       </div>
       <div class="mini se-glass">
         <h3>Siguiente paso</h3>
-        <p>Revisión técnica por parte del equipo Solutimp Energy.</p>
+        <p>Te contactaremos para agendar evaluación técnica sin costo en la zona indicada.</p>
       </div>
       <div class="mini se-glass">
         <h3>Asesoría</h3>
-        <p>Propuesta personalizada según tu región, consumo y objetivos.</p>
+        <p>Propuesta personalizada según región, consumo y objetivos que marcaste.</p>
       </div>
     </div>
     <div class="actions">
       <a class="se-btn" href="https://solutimp.cl" target="_blank" rel="noopener noreferrer">Visitar solutimp.cl</a>
-      <button type="button" class="se-btn se-btn--ghost" disabled title="Próximamente">Hablar con un asesor</button>
+      <a class="se-btn se-btn--ghost" :href="waHref" target="_blank" rel="noopener noreferrer"
+        >💬 Hablar por WhatsApp</a
+      >
     </div>
   </div>
 </template>
@@ -98,37 +128,10 @@ const firstName = () => {
   line-height: 1.4;
 }
 
-.shimmer {
-  position: relative;
-  overflow: hidden;
-}
-
-.shimmer::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    100deg,
-    transparent 40%,
-    rgba(255, 255, 255, 0.06) 50%,
-    transparent 60%
-  );
-  animation: shimmer-move 2.5s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .shimmer::after {
-    animation: none;
-  }
-}
-
-@keyframes shimmer-move {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
+.mini .sub {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--se-text-muted);
 }
 
 .actions {
@@ -140,5 +143,6 @@ const firstName = () => {
 .actions .se-btn {
   text-decoration: none;
   box-sizing: border-box;
+  text-align: center;
 }
 </style>

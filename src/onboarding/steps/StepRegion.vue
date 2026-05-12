@@ -7,8 +7,10 @@ const w = inject(wizardInjectionKey)!
 
 const canContinue = computed(() => w.region.length > 0)
 
-function continueNext() {
-  if (canContinue.value) w.next()
+async function continueNext() {
+  if (!canContinue.value || w.simulationLoading) return
+  await w.simulateProject()
+  w.next()
 }
 </script>
 
@@ -21,7 +23,10 @@ function continueNext() {
       <option disabled value="">Selecciona una región</option>
       <option v-for="r in CHILE_REGIONS" :key="r.value" :value="r.value">{{ r.label }}</option>
     </select>
-    <button type="button" class="se-btn se-btn--mt" :disabled="!canContinue" @click="continueNext">Continuar</button>
+    <button type="button" class="se-btn se-btn--mt" :disabled="!canContinue || w.simulationLoading" @click="continueNext">
+      <span v-if="w.simulationLoading" class="spin" aria-hidden="true" />
+      {{ w.simulationLoading ? 'Preparando tu propuesta…' : 'Continuar' }}
+    </button>
   </div>
 </template>
 
@@ -71,5 +76,30 @@ function continueNext() {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   border: 0;
+}
+
+.spin {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.45rem;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: var(--se-cyan);
+  border-radius: 50%;
+  vertical-align: -0.15em;
+  animation: spin-360 0.7s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+    border-top-color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+@keyframes spin-360 {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

@@ -1,5 +1,7 @@
 import type { InjectionKey, UnwrapNestedRefs } from 'vue'
 import { computed, ref } from 'vue'
+import { postSimulate, type SimulationResult } from '@/api/energySimulate'
+import { CHILE_REGIONS } from '@/shared/chileRegions'
 
 export type PropertyType =
   | 'casa'
@@ -25,7 +27,7 @@ export type MainGoal =
   | 'empresa'
   | ''
 
-export const TOTAL_STEPS = 7
+export const TOTAL_STEPS = 8
 
 export function createWizardState() {
   const currentStep = ref(0)
@@ -39,6 +41,9 @@ export function createWizardState() {
   const email = ref('')
   const communeOrAddress = ref('')
   const acceptedContact = ref(false)
+
+  const simulationResult = ref<SimulationResult | null>(null)
+  const simulationLoading = ref(false)
 
   const progressFraction = computed(() => (currentStep.value + 1) / TOTAL_STEPS)
 
@@ -55,6 +60,56 @@ export function createWizardState() {
   function back() {
     if (currentStep.value > 0) {
       currentStep.value -= 1
+    }
+  }
+
+  function regionLabel(code: string): string {
+    return CHILE_REGIONS.find((r) => r.value === code)?.label ?? code
+  }
+
+  function mapConsumption(c: ConsumptionRange): string {
+    const m: Record<string, string> = {
+      lt50: 'menos_50k',
+      '50_100': '50k_100k',
+      '100_200': '100k_200k',
+      gt200: 'mas_200k',
+      unknown: 'no_se',
+      '': 'no_se',
+    }
+    return m[c] ?? 'no_se'
+  }
+
+  function mapGoal(g: MainGoal): string {
+    const m: Record<string, string> = {
+      ahorro: 'ahorro',
+      respaldo: 'respaldo',
+      equipos_criticos: 'proteger_equipos',
+      vender_excedente: 'vender_excedentes',
+      empresa: 'empresa',
+      '': 'ahorro',
+    }
+    return m[g] ?? 'ahorro'
+  }
+
+  async function simulateProject() {
+    simulationLoading.value = true
+    simulationResult.value = null
+    const minDelay = new Promise<void>((resolve) => {
+      setTimeout(resolve, 520)
+    })
+    try {
+      const [res] = await Promise.all([
+        postSimulate({
+          property_type: (propertyType.value || 'casa') as string,
+          consumption_range: mapConsumption(consumptionRange.value),
+          main_goal: mapGoal(mainGoal.value),
+          region: regionLabel(region.value),
+        }),
+        minDelay,
+      ])
+      simulationResult.value = res
+    } finally {
+      simulationLoading.value = false
     }
   }
 
@@ -75,6 +130,8 @@ export function createWizardState() {
     email.value = ''
     communeOrAddress.value = ''
     acceptedContact.value = false
+    simulationResult.value = null
+    simulationLoading.value = false
   }
 
   return {
@@ -89,6 +146,9 @@ export function createWizardState() {
     email,
     communeOrAddress,
     acceptedContact,
+    simulationResult,
+    simulationLoading,
+    simulateProject,
     progressFraction,
     goToStep,
     next,

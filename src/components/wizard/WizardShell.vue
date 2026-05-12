@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import ProgressBar from './ProgressBar.vue'
 
-defineProps<{
-  currentStep: number
-  totalSteps: number
-  progressFraction: number
-  showBack: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    currentStep: number
+    totalSteps: number
+    progressFraction: number
+    showBack: boolean
+    /** Oculta barra de progreso “paso a paso” para la pantalla de propuesta */
+    variant?: 'default' | 'proposal'
+  }>(),
+  { variant: 'default' }
+)
 
 const emit = defineEmits<{
   back: []
@@ -14,9 +19,9 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="ws">
+  <div class="ws" :class="{ 'ws--proposal': props.variant === 'proposal' }">
     <div class="ws-inner">
-      <ProgressBar :fraction="progressFraction" />
+      <ProgressBar v-if="props.variant === 'default'" :fraction="progressFraction" />
       <div class="ws-head">
         <button
           v-if="showBack"
@@ -28,11 +33,12 @@ const emit = defineEmits<{
           ← Volver
         </button>
         <span v-else class="ws-spacer" />
-        <span class="ws-step-label">Paso {{ currentStep + 1 }} de {{ totalSteps }}</span>
+        <span v-if="props.variant === 'default'" class="ws-step-label">Paso {{ currentStep + 1 }} de {{ totalSteps }}</span>
+        <span v-else class="ws-step-label ws-step-label--accent">Tu propuesta · Solutimp Energy</span>
       </div>
-      <div class="ws-card se-glass">
+      <div class="ws-card se-glass" :class="{ 'ws-card--proposal': props.variant === 'proposal' }">
         <Transition name="ws-slide" mode="out-in">
-          <div :key="currentStep" class="ws-slot">
+          <div :key="currentStep" class="ws-slot" :class="{ 'ws-slot--proposal': props.variant === 'proposal' }">
             <slot />
           </div>
         </Transition>
@@ -58,6 +64,31 @@ const emit = defineEmits<{
   .ws-inner {
     max-width: 520px;
   }
+
+  .ws--proposal .ws-inner {
+    max-width: 700px;
+  }
+}
+
+.ws-step-label--accent {
+  color: var(--se-cyan);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+.ws--proposal .ws-head {
+  margin-bottom: 0.5rem;
+}
+
+.ws-card--proposal {
+  min-height: 120px;
+  padding: 1.25rem 1.1rem 1.35rem;
+}
+
+.ws-slot--proposal {
+  min-height: 0;
 }
 
 .ws-head {
