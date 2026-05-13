@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, onUnmounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { calculadoraFlowKey } from '@/composables/useCalculadoraFlow'
 import {
   AUTONOMY_RANGE_DISCLAIMER,
@@ -14,6 +15,8 @@ import { buildWhatsAppLink } from '@/shared/whatsapp'
 import CalcContactBlock from './CalcContactBlock.vue'
 
 const flow = inject(calculadoraFlowKey)!
+
+const router = useRouter()
 
 const narration = computed(() =>
   getEnergyNarrativeContext({
@@ -586,6 +589,16 @@ const waHref = computed(() => {
         >
       </div>
     </div>
+
+    <p class="sim-disclaimer">
+      <span aria-hidden="true">ℹ️</span>
+      Simulación preliminar basada en el valor de tu boleta. Para una propuesta exacta revisaremos consumo real,
+      orientación, sombras y superficie disponible.
+    </p>
+
+    <button type="button" class="btn-onboarding-cta" @click="router.push('/onboarding')">
+      Quiero una evaluación técnica completa →
+    </button>
 
     <div
       v-if="showContactForm"
@@ -1617,5 +1630,36 @@ const waHref = computed(() => {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.sim-disclaimer {
+  font-size: 0.78rem;
+  color: var(--se-text-muted, #8899aa);
+  margin-top: 12px;
+  line-height: 1.5;
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.btn-onboarding-cta {
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px 16px;
+  border: 1.5px solid var(--se-green, #1d9e75);
+  background: transparent;
+  color: var(--se-green, #1d9e75);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+
+.btn-onboarding-cta:hover {
+  background: var(--se-green, #1d9e75);
+  color: #fff;
 }
 </style>

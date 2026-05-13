@@ -10,7 +10,6 @@ export type EnergyLeadPayload = {
   email: string
   communeOrAddress?: string
   acceptedContact: boolean
-  /** Monto mensual luz (CLP) capturado en /calculadora; backend puede ignorar hasta soportarlo. */
   monthlyBillAmount?: number
   utm_source?: string
   utm_medium?: string
@@ -19,17 +18,51 @@ export type EnergyLeadPayload = {
   utm_term?: string
 }
 
-/**
- * POST /api/v1/energy/leads — si el backend aún no expone el endpoint,
- * no lanzar al caller: devolver ok:false y el caller sigue el flujo UX.
- */
-export async function submitEnergyLead(payload: EnergyLeadPayload): Promise<{ ok: boolean; status?: number }> {
+type EnergyLeadBackendPayload = {
+  source: 'calculadora'
+  full_name?: string
+  phone?: string
+  email?: string
+  profile?: string
+  objective?: string
+  monthly_bill_range?: string
+  utm_source?: string
+  utm_medium?: string
+  utm_campaign?: string
+  metadata?: Record<string, unknown>
+}
+
+export async function submitEnergyLead(
+  payload: EnergyLeadPayload
+): Promise<{ ok: boolean; leadId?: string; status?: number }> {
   const url = apiUrl('/api/v1/energy/leads')
+  const backendPayload: EnergyLeadBackendPayload = {
+    source: 'calculadora',
+    full_name: payload.name || undefined,
+    phone: payload.phone || undefined,
+    email: payload.email || undefined,
+    profile: payload.propertyType || undefined,
+    objective: payload.mainGoal || undefined,
+    monthly_bill_range: payload.consumptionRange || undefined,
+    utm_source: payload.utm_source || undefined,
+    utm_medium: payload.utm_medium || undefined,
+    utm_campaign: payload.utm_campaign || undefined,
+    metadata: {
+      property_type: payload.propertyType,
+      region: payload.region,
+      commune_or_address: payload.communeOrAddress,
+      accepted_contact: payload.acceptedContact,
+      monthly_bill_amount: payload.monthlyBillAmount,
+      utm_content: payload.utm_content,
+      utm_term: payload.utm_term,
+      source_ui: 'calculadora',
+    },
+  }
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(backendPayload),
     })
     if (!res.ok) {
       if (import.meta.env.DEV) {
@@ -37,11 +70,11 @@ export async function submitEnergyLead(payload: EnergyLeadPayload): Promise<{ ok
       }
       return { ok: false, status: res.status }
     }
-    return { ok: true, status: res.status }
+    const data = await res.json().catch(() => ({}))
+    return { ok: true, status: res.status, leadId: data?.id }
   } catch (e) {
-    // Endpoint ausente, CORS en dev, red, etc.: no bloquear wizard
     if (import.meta.env.DEV) {
-      console.warn('[energyLeads] POST falló (conectar backend luego)', e)
+      console.warn('[energyLeads] POST falló', e)
     }
     return { ok: false }
   }
