@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, nextTick, onUnmounted, ref, watch } from 'vue'
+import { computed, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { calculadoraFlowKey } from '@/composables/useCalculadoraFlow'
 import {
@@ -12,7 +12,6 @@ import { getContinuityDuringOutageRows } from '@/calculadora/continuityDuringOut
 import { resolveNarrativeSegment } from '@/calculadora/semanticDecisionEngine'
 import { formatCLP } from '@/shared/formatCLP'
 import { buildWhatsAppLink } from '@/shared/whatsapp'
-import CalcContactBlock from './CalcContactBlock.vue'
 
 const flow = inject(calculadoraFlowKey)!
 
@@ -26,28 +25,6 @@ const narration = computed(() =>
 )
 
 const visualPriority = computed(() => narration.value.primaryKpiMode)
-
-const showContactForm = ref(false)
-
-watch(
-  () => [flow.propertyType, flow.mainGoal] as const,
-  () => {
-    showContactForm.value = false
-  }
-)
-
-onUnmounted(() => {
-  showContactForm.value = false
-})
-
-function revealContactForm() {
-  showContactForm.value = true
-  nextTick(() => {
-    const el = document.getElementById('calc-name')
-    el?.focus({ preventScroll: false })
-    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  })
-}
 
 const sim = computed(() => flow.simulationResult)
 const econ = computed(() => sim.value?.economics)
@@ -570,50 +547,21 @@ const waHref = computed(() => {
     </p>
 
     <div class="plan-cta-row animate" style="animation-delay: 0.2s">
-      <button
-        type="button"
-        class="plan-primary-cta"
-        :aria-expanded="showContactForm"
-        aria-controls="calc-contact-panel"
-        @click="revealContactForm"
-      >
-        {{ narration.formRevealCtaLabel }}
+      <button type="button" class="cta-primary-onboarding" @click="router.push('/onboarding')">
+        Quiero mi evaluación técnica completa →
       </button>
-      <div class="plan-wa-desktop">
-        <a
-          class="wa-btn wa-btn--secondary"
-          :href="waHref"
-          target="_blank"
-          rel="noopener noreferrer"
-          >{{ narration.whatsappButtonLabel }}</a
-        >
-      </div>
+
+      <p class="sim-disclaimer">
+        <span aria-hidden="true">ℹ️</span>
+        Simulación preliminar basada en el valor de tu boleta. Para una propuesta exacta revisaremos consumo real,
+        orientación, sombras y superficie disponible.
+      </p>
+
+      <a :href="waHref" target="_blank" rel="noopener" class="wa-link-secondary">
+        ¿Prefieres hablar ahora? Contactar especialista por WhatsApp
+      </a>
     </div>
 
-    <p class="sim-disclaimer">
-      <span aria-hidden="true">ℹ️</span>
-      Simulación preliminar basada en el valor de tu boleta. Para una propuesta exacta revisaremos consumo real,
-      orientación, sombras y superficie disponible.
-    </p>
-
-    <button type="button" class="btn-onboarding-cta" @click="router.push('/onboarding')">
-      Quiero una evaluación técnica completa →
-    </button>
-
-    <div
-      v-if="showContactForm"
-      id="calc-contact-panel"
-      class="plan-form animate"
-      style="animation-delay: 0.22s"
-    >
-      <CalcContactBlock />
-    </div>
-
-    <div class="wa-sticky hidden-md-up" role="region" aria-label="Contacto WhatsApp">
-      <a class="wa-sticky-btn wa-sticky-btn--secondary" :href="waHref" target="_blank" rel="noopener noreferrer">{{
-        narration.whatsappButtonLabel
-      }}</a>
-    </div>
   </div>
 </template>
 
@@ -646,23 +594,9 @@ const waHref = computed(() => {
   }
 
   .plan-cta-row {
-    flex-direction: row;
+    flex-direction: column;
     align-items: stretch;
     gap: 1rem;
-  }
-
-  .plan-primary-cta {
-    flex: 1.15;
-  }
-
-  .plan-wa-desktop {
-    flex: 1;
-    display: flex;
-    align-items: center;
-  }
-
-  .plan-wa-desktop .wa-btn {
-    margin-bottom: 0;
   }
 
   .plan-form {
@@ -853,38 +787,6 @@ const waHref = computed(() => {
   flex-direction: column;
   gap: 0.65rem;
   margin: 1rem 0 0.75rem;
-}
-
-.plan-primary-cta {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0.95rem 1rem;
-  border-radius: var(--se-radius-md);
-  border: none;
-  font-family: inherit;
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  color: #0d1f35;
-  background: linear-gradient(135deg, #5eead4 0%, #38bdf8 100%);
-}
-
-.plan-primary-cta:focus {
-  outline: 2px solid #e0f2fe;
-  outline-offset: 2px;
-}
-
-.plan-primary-cta:focus:not(:focus-visible) {
-  outline: none;
-}
-
-.plan-primary-cta:focus-visible {
-  outline: 2px solid #e0f2fe;
-  outline-offset: 2px;
-}
-
-.plan-wa-desktop {
-  display: block;
 }
 
 .plan-head {
@@ -1550,67 +1452,6 @@ const waHref = computed(() => {
   margin-bottom: 1rem;
 }
 
-.wa-btn {
-  display: block;
-  text-align: center;
-  text-decoration: none;
-  box-sizing: border-box;
-  padding: 0.9rem 1rem;
-  border-radius: var(--se-radius-md);
-  font-weight: 700;
-  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
-  color: #fff !important;
-}
-
-.wa-btn--secondary {
-  font-weight: 600;
-  font-size: 0.92rem;
-  padding: 0.75rem 1rem;
-  background: transparent;
-  color: #a5f3fc !important;
-  border: 1px solid rgba(94, 234, 212, 0.45);
-}
-
-.wa-btn--secondary:hover {
-  background: rgba(94, 234, 212, 0.08);
-}
-
-.wa-sticky {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1200;
-  padding: 0.65rem 1rem max(0.65rem, env(safe-area-inset-bottom));
-  background: linear-gradient(180deg, transparent 0%, rgba(13, 31, 53, 0.92) 28%, #0d1f35 100%);
-  border-top: 1px solid var(--plan-border);
-  display: flex;
-  justify-content: center;
-}
-
-.wa-sticky-btn {
-  display: block;
-  width: 100%;
-  max-width: 520px;
-  text-align: center;
-  text-decoration: none;
-  box-sizing: border-box;
-  padding: 0.95rem 1rem;
-  border-radius: var(--se-radius-md);
-  font-weight: 700;
-  font-size: 1rem;
-  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
-  color: #fff !important;
-}
-
-.wa-sticky-btn--secondary {
-  font-weight: 600;
-  font-size: 0.92rem;
-  background: rgba(37, 211, 102, 0.2);
-  border: 1px solid rgba(37, 211, 102, 0.55);
-  color: #ecfdf5 !important;
-}
-
 .animate {
   opacity: 0;
   transform: translateY(12px);
@@ -1642,24 +1483,44 @@ const waHref = computed(() => {
   align-items: flex-start;
 }
 
-.btn-onboarding-cta {
+.cta-primary-onboarding {
+  display: block;
   width: 100%;
-  margin-top: 8px;
-  padding: 12px 16px;
-  border: 1.5px solid var(--se-green, #1d9e75);
-  background: transparent;
-  color: var(--se-green, #1d9e75);
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background 0.2s,
-    color 0.2s;
-}
-
-.btn-onboarding-cta:hover {
+  padding: 16px;
   background: var(--se-green, #1d9e75);
   color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  transition:
+    background 0.2s,
+    transform 0.1s;
+  margin-bottom: 12px;
+}
+
+.cta-primary-onboarding:hover {
+  background: #168a63;
+  transform: translateY(-1px);
+}
+
+.cta-primary-onboarding:active {
+  transform: translateY(0);
+}
+
+.wa-link-secondary {
+  display: block;
+  text-align: center;
+  margin-top: 12px;
+  font-size: 0.88rem;
+  color: var(--se-text-muted, #8899aa);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.wa-link-secondary:hover {
+  color: var(--se-green, #1d9e75);
 }
 </style>
