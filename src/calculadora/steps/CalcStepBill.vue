@@ -16,7 +16,7 @@ function onSliderInput(e: Event) {
 
 function continueNext() {
   if (!flow.canAdvanceBill()) return
-  flow.next()
+  void flow.continueFromRegion()
 }
 </script>
 
@@ -42,8 +42,14 @@ function continueNext() {
       <p class="bill-foot">Mientras más exacto, mejor será tu estimación.</p>
     </div>
 
-    <button type="button" class="se-btn se-btn--mt" :disabled="!flow.canAdvanceBill()" @click="continueNext">
-      Continuar
+    <button
+      type="button"
+      class="se-btn se-btn--mt"
+      :disabled="!flow.canAdvanceBill() || flow.simulationLoading || flow.analysisPhase"
+      @click="continueNext"
+    >
+      <span v-if="flow.simulationLoading" class="spin" aria-hidden="true" />
+      {{ flow.simulationLoading ? 'Calculando…' : 'Ver mi estimación' }}
     </button>
   </div>
 </template>
@@ -125,5 +131,23 @@ function continueNext() {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   border: 0;
+}
+
+.spin {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.45rem;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: var(--se-cyan);
+  border-radius: 50%;
+  vertical-align: -0.15em;
+  animation: calc-spin 0.7s linear infinite;
+}
+
+@keyframes calc-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

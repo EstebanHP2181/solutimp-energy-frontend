@@ -1,8 +1,20 @@
 <script setup lang="ts">
-import { inject, watch } from 'vue'
+import { computed, inject, watch } from 'vue'
 import { calculadoraFlowKey } from '@/composables/useCalculadoraFlow'
+import { CHILE_REGIONS } from '@/shared/chileRegions'
+import { inferRegionFromText } from '@/shared/inferRegionFromText'
 
 const flow = inject(calculadoraFlowKey)!
+
+const inferredRegionCode = computed(() => inferRegionFromText(flow.calcLocationLine.trim()))
+
+const detectedRegionLabel = computed(() => {
+  const c = inferredRegionCode.value
+  if (!c) return ''
+  return flow.regionLabel(c)
+})
+
+const showRegionSelect = computed(() => inferredRegionCode.value === null)
 
 /** Al volver a este paso, rehidratar el borrador desde lo ya confirmado. */
 watch(
@@ -21,10 +33,9 @@ watch(
     <p class="calc-step__eyebrow">Ubicación</p>
     <h2 class="calc-step__title">¿Dónde está la propiedad?</h2>
     <p class="calc-step__hint">
-      Esto nos ayuda a estimar irradiación solar y factibilidad preliminar. Puedes escribir comuna o una dirección
-      aproximada.
+      Escribe la comuna o dirección. Usamos esto para estimar la radiación solar de tu zona.
     </p>
-    <label class="field-label" for="calc-location-line">Dirección o comuna</label>
+    <label class="field-label" for="calc-location-line">Comuna, ciudad o dirección</label>
     <input
       id="calc-location-line"
       v-model="flow.calcLocationLine"
@@ -32,15 +43,28 @@ watch(
       class="field-input"
       name="calc-location"
       autocomplete="street-address"
-      placeholder="Ingresa dirección o comuna"
+      placeholder="Ej: Las Condes, Santiago"
       enterkeyhint="done"
       @keydown.enter.prevent="flow.commitLocationAndAdvance()"
     />
-    <p class="field-foot">Tip: si quieres separar calle y comuna, usa una coma.</p>
+    <p v-if="detectedRegionLabel" class="region-feedback" role="status">
+      📍 Región detectada: {{ detectedRegionLabel }}
+    </p>
+    <template v-if="showRegionSelect">
+      <label class="field-label field-label--mt" for="calc-region-inline">Región</label>
+      <p class="field-hint-inline">No pudimos inferir la región desde el texto. Selecciónala para continuar.</p>
+      <select id="calc-region-inline" v-model="flow.region" class="region-select" required>
+        <option disabled value="">Selecciona una región</option>
+        <option v-for="r in CHILE_REGIONS" :key="r.value" :value="r.value">{{ r.label }}</option>
+      </select>
+    </template>
+    <p class="field-foot">
+      Con la comuna es suficiente. Si quieres más precisión, agrega la dirección completa.
+    </p>
     <button
       type="button"
       class="se-btn se-btn--mt"
-      :disabled="!flow.canAdvanceLocation()"
+      :disabled="!flow.canCompleteLocationStep()"
       @click="flow.commitLocationAndAdvance()"
     >
       Continuar
@@ -83,6 +107,17 @@ watch(
   margin-bottom: 0.45rem;
 }
 
+.field-label--mt {
+  margin-top: 1rem;
+}
+
+.field-hint-inline {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  color: var(--se-text-muted);
+  line-height: 1.4;
+}
+
 .field-input {
   width: 100%;
   box-sizing: border-box;
@@ -114,6 +149,33 @@ watch(
   border-color: var(--se-cyan);
   box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.25);
   background: rgba(6, 20, 38, 0.72);
+}
+
+.region-feedback {
+  margin: 0 0 0.75rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--se-cyan);
+  line-height: 1.4;
+}
+
+.region-select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 1rem 1rem;
+  border-radius: var(--se-radius-md);
+  border: 1px solid var(--se-glass-border);
+  background: rgba(6, 20, 38, 0.65);
+  color: var(--se-text);
+  font-size: 1rem;
+  font-family: inherit;
+  margin-bottom: 0.65rem;
+  cursor: pointer;
+}
+
+.region-select:focus {
+  outline: 2px solid var(--se-cyan);
+  outline-offset: 2px;
 }
 
 .field-foot {

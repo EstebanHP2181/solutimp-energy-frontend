@@ -1,7 +1,8 @@
 import type { InjectionKey, UnwrapNestedRefs } from 'vue'
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { postSimulate, type SimulationResult } from '@/api/energySimulate'
 import { CHILE_REGIONS } from '@/shared/chileRegions'
+import { inferRegionFromText } from '@/shared/inferRegionFromText'
 import {
   consumptionRangeForPrudentSimulate,
   monthlyBillAmountToConsumptionRange,
@@ -34,8 +35,8 @@ const SLIDER_MIN = 10_000
 const SLIDER_MAX = 500_000
 const SLIDER_STEP = 5_000
 
-/** Pasos post-hero: propiedad → ubicación → objetivo → prioridades → boleta → región → resultado */
-export const CALC_POST_HERO_STEPS = 7
+/** Pasos post-hero: propiedad → ubicación+región → objetivo → prioridades → boleta → resultado */
+export const CALC_POST_HERO_STEPS = 6
 
 function mapGoalToApi(g: CalcMainGoal): string {
   const m: Record<string, string> = {
@@ -75,9 +76,9 @@ export function useCalculadoraFlow() {
   const communeOrAddress = ref('')
   const acceptedContact = ref(false)
 
-  /** Borrador del paso “ubicación” (una sola caja por ahora). */
+  /** Borrador del paso “ubicación” (una sola caja). */
   const calcLocationLine = ref('')
-  /** Derivado al confirmar ubicación; reservado para refinamiento futuro. */
+  /** Derivado al confirmar ubicación. */
   const direccion = ref('')
   const comuna = ref('')
   const regionLocationInferida = ref('')
@@ -88,8 +89,22 @@ export function useCalculadoraFlow() {
 
   const consumptionRangeForApi = computed(() => monthlyBillAmountToConsumptionRange(monthlyBillAmount.value))
 
-  function canAdvanceLocation(): boolean {
-    return calcLocationLine.value.trim().length >= 3
+  watch(calcLocationLine, (v) => {
+    const t = v.trim()
+    if (t.length === 0) {
+      region.value = ''
+      return
+    }
+    if (t.length < 3) return
+    if (!inferRegionFromText(t)) {
+      region.value = ''
+    }
+  })
+
+  function canCompleteLocationStep(): boolean {
+    const raw = calcLocationLine.value.trim()
+    if (raw.length < 3) return false
+    return inferRegionFromText(raw) !== null || region.value.length > 0
   }
 
   function canAdvanceBill(): boolean {
@@ -121,12 +136,20 @@ export function useCalculadoraFlow() {
       comuna.value = raw
     }
     communeOrAddress.value = raw
-    regionLocationInferida.value = ''
   }
 
   function commitLocationAndAdvance() {
-    if (!canAdvanceLocation()) return
+    if (!canCompleteLocationStep()) return
     commitLocationFields()
+    const raw = calcLocationLine.value.trim()
+    const inferred = inferRegionFromText(raw)
+    if (inferred) {
+      region.value = inferred
+      regionLocationInferida.value = inferred
+    } else {
+      if (!region.value) return
+      regionLocationInferida.value = ''
+    }
     next()
   }
 
@@ -211,8 +234,9 @@ export function useCalculadoraFlow() {
     }
   }
 
+  /** Tras el paso boleta: ejecuta simulación y avanza al resultado (sin paso región aparte). */
   async function continueFromRegion() {
-    if (!canAdvanceRegion() || simulationLoading.value) return
+    if (!canAdvanceBill() || !canAdvanceRegion() || simulationLoading.value) return
     analysisPhase.value = true
     try {
       await runSimulate()
@@ -246,7 +270,7 @@ export function useCalculadoraFlow() {
     regionLocationInferida,
     secondaryPriorities,
     progressFraction,
-    canAdvanceLocation,
+    canCompleteLocationStep,
     canAdvanceBill,
     canAdvanceProfile,
     canAdvanceRegion,

@@ -2,7 +2,6 @@
 import { computed, onMounted, provide, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import CalcHeroStep from '@/calculadora/CalcHeroStep.vue'
-import CalcRegionStep from '@/calculadora/CalcRegionStep.vue'
 import CalcResultStep from '@/calculadora/CalcResultStep.vue'
 import CalcStepBill from '@/calculadora/steps/CalcStepBill.vue'
 import CalcStepGoal from '@/calculadora/steps/CalcStepGoal.vue'
@@ -44,7 +43,6 @@ const stepComponent = computed(() => {
     CalcStepGoal,
     CalcStepSecondary,
     CalcStepBill,
-    CalcRegionStep,
     CalcResultStep,
   ] as const
   return map[flow.postHeroStep] ?? CalcStepProperty
