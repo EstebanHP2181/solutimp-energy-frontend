@@ -18,9 +18,24 @@ export type CalcMainGoal =
   | 'empresa'
   | ''
 
+/** Prioridades secundarias (UX v2); aún no enviadas al API de simulación. */
+export type CalcSecondaryPriorityId =
+  | 'internet_wifi'
+  | 'porton'
+  | 'camaras'
+  | 'refrigeracion'
+  | 'iluminacion'
+  | 'aire_acondicionado'
+  | 'bombas'
+  | 'oficina'
+  | 'ev'
+
 const SLIDER_MIN = 10_000
 const SLIDER_MAX = 500_000
 const SLIDER_STEP = 5_000
+
+/** Pasos post-hero: propiedad → ubicación → objetivo → prioridades → boleta → región → resultado */
+export const CALC_POST_HERO_STEPS = 7
 
 function mapGoalToApi(g: CalcMainGoal): string {
   const m: Record<string, string> = {
@@ -38,12 +53,16 @@ function regionLabel(code: string): string {
   return CHILE_REGIONS.find((r) => r.value === code)?.label ?? code
 }
 
-export const CALC_POST_HERO_STEPS = 3
+function prefersReducedMotion(): boolean {
+  if (typeof matchMedia === 'undefined') return false
+  return matchMedia('(prefers-reduced-motion: reduce)').matches
+}
 
 export function useCalculadoraFlow() {
   const postHeroStep = ref(0)
   const monthlyBillAmount = ref(85_000)
   const propertyType = ref<CalcPropertyType>('')
+  /** Objetivo principal (misma semántica que antes para API / narrativa). */
   const mainGoal = ref<CalcMainGoal>('')
   const region = ref('')
   const simulationResult = ref<SimulationResult | null>(null)
@@ -56,11 +75,24 @@ export function useCalculadoraFlow() {
   const communeOrAddress = ref('')
   const acceptedContact = ref(false)
 
+  /** Borrador del paso “ubicación” (una sola caja por ahora). */
+  const calcLocationLine = ref('')
+  /** Derivado al confirmar ubicación; reservado para refinamiento futuro. */
+  const direccion = ref('')
+  const comuna = ref('')
+  const regionLocationInferida = ref('')
+
+  const secondaryPriorities = ref<CalcSecondaryPriorityId[]>([])
+
   const progressFraction = computed(() => (postHeroStep.value + 1) / CALC_POST_HERO_STEPS)
 
   const consumptionRangeForApi = computed(() => monthlyBillAmountToConsumptionRange(monthlyBillAmount.value))
 
-  function canAdvanceProfile() {
+  function canAdvanceLocation(): boolean {
+    return calcLocationLine.value.trim().length >= 3
+  }
+
+  function canAdvanceBill(): boolean {
     return (
       propertyType.value !== '' &&
       mainGoal.value !== '' &&
@@ -69,8 +101,60 @@ export function useCalculadoraFlow() {
     )
   }
 
+  /** @deprecated usar canAdvanceBill; se mantiene por compatibilidad con tests o código legacy */
+  function canAdvanceProfile() {
+    return canAdvanceBill()
+  }
+
   function canAdvanceRegion() {
     return region.value.length > 0
+  }
+
+  function commitLocationFields() {
+    const raw = calcLocationLine.value.trim()
+    const parts = raw.split(',').map((s) => s.trim()).filter(Boolean)
+    if (parts.length >= 2) {
+      direccion.value = parts[0] ?? ''
+      comuna.value = parts.slice(1).join(', ')
+    } else {
+      direccion.value = ''
+      comuna.value = raw
+    }
+    communeOrAddress.value = raw
+    regionLocationInferida.value = ''
+  }
+
+  function commitLocationAndAdvance() {
+    if (!canAdvanceLocation()) return
+    commitLocationFields()
+    next()
+  }
+
+  function toggleSecondary(id: CalcSecondaryPriorityId) {
+    const list = secondaryPriorities.value
+    const i = list.indexOf(id)
+    if (i >= 0) list.splice(i, 1)
+    else list.push(id)
+  }
+
+  function autoAdvanceDelayMs() {
+    return prefersReducedMotion() ? 0 : 220
+  }
+
+  function scheduleAutoNext() {
+    window.setTimeout(() => {
+      next()
+    }, autoAdvanceDelayMs())
+  }
+
+  function selectPropertyType(v: Exclude<CalcPropertyType, ''>) {
+    propertyType.value = v
+    scheduleAutoNext()
+  }
+
+  function selectMainGoal(v: Exclude<CalcMainGoal, ''>) {
+    mainGoal.value = v
+    scheduleAutoNext()
   }
 
   function nextFromHero() {
@@ -156,9 +240,20 @@ export function useCalculadoraFlow() {
     email,
     communeOrAddress,
     acceptedContact,
+    calcLocationLine,
+    direccion,
+    comuna,
+    regionLocationInferida,
+    secondaryPriorities,
     progressFraction,
+    canAdvanceLocation,
+    canAdvanceBill,
     canAdvanceProfile,
     canAdvanceRegion,
+    commitLocationAndAdvance,
+    toggleSecondary,
+    selectPropertyType,
+    selectMainGoal,
     nextFromHero,
     next,
     back,

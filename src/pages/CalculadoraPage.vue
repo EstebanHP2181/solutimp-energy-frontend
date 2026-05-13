@@ -2,9 +2,13 @@
 import { computed, onMounted, provide, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import CalcHeroStep from '@/calculadora/CalcHeroStep.vue'
-import CalcProfileStep from '@/calculadora/CalcProfileStep.vue'
 import CalcRegionStep from '@/calculadora/CalcRegionStep.vue'
 import CalcResultStep from '@/calculadora/CalcResultStep.vue'
+import CalcStepBill from '@/calculadora/steps/CalcStepBill.vue'
+import CalcStepGoal from '@/calculadora/steps/CalcStepGoal.vue'
+import CalcStepLocation from '@/calculadora/steps/CalcStepLocation.vue'
+import CalcStepProperty from '@/calculadora/steps/CalcStepProperty.vue'
+import CalcStepSecondary from '@/calculadora/steps/CalcStepSecondary.vue'
 import EnergyAnalysisLoading from '@/calculadora/EnergyAnalysisLoading.vue'
 import EnergyBackground from '@/components/wizard/EnergyBackground.vue'
 import WizardShell from '@/components/wizard/WizardShell.vue'
@@ -34,8 +38,16 @@ function start() {
 }
 
 const stepComponent = computed(() => {
-  const map = [CalcProfileStep, CalcRegionStep, CalcResultStep] as const
-  return map[flow.postHeroStep] ?? CalcProfileStep
+  const map = [
+    CalcStepProperty,
+    CalcStepLocation,
+    CalcStepGoal,
+    CalcStepSecondary,
+    CalcStepBill,
+    CalcRegionStep,
+    CalcResultStep,
+  ] as const
+  return map[flow.postHeroStep] ?? CalcStepProperty
 })
 
 const showBack = computed(() => !showHero.value && flow.postHeroStep > 0)
@@ -85,6 +97,7 @@ const narrativeForLoading = computed(() =>
   min-height: 12rem;
   max-width: 560px;
   margin: 0 auto;
-  padding: 0.75rem 1rem 2rem;
+  padding: 0.75rem max(1rem, env(safe-area-inset-left, 0px)) max(2rem, env(safe-area-inset-bottom, 0px))
+    max(1rem, env(safe-area-inset-right, 0px));
 }
 </style>
