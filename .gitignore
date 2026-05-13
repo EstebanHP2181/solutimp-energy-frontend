@@ -32,3 +32,4 @@ vitest.config.*.timestamp-*
 # Package manager locks (opcional: descomenta si usas solo uno y quieres ignorar el resto)
 # pnpm-lock.yaml
 # yarn.lock
+solutimp-energy-dist.zip
