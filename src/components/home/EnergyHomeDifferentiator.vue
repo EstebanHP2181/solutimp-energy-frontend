@@ -21,17 +21,17 @@
 
 <style scoped>
 .eh-section {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.75rem;
 }
 
 @media (min-width: 768px) {
   .eh-section {
-    margin-bottom: 2.25rem;
+    margin-bottom: 2.5rem;
   }
 }
 
 .eh-h2 {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.55rem;
   font-size: clamp(1.08rem, 3.2vw, 1.4rem);
   font-weight: 700;
   letter-spacing: -0.018em;
@@ -40,7 +40,7 @@
 }
 
 .eh-prose {
-  margin: 0 0 0.85rem;
+  margin: 0 0 1.05rem;
   font-size: 0.88rem;
   line-height: 1.58;
   letter-spacing: 0.01em;
@@ -67,7 +67,7 @@
   padding: 0;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.4rem;
+  gap: 0.5rem;
 }
 
 @media (min-width: 520px) {
@@ -87,10 +87,10 @@
   font-weight: 600;
   letter-spacing: 0.015em;
   color: #cbd5e1;
-  padding: 0.45rem 0.6rem;
+  padding: 0.52rem 0.68rem;
   border-radius: var(--se-radius-md);
-  border: 1px solid var(--se-glass-border);
-  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--eh-surface-border);
+  background: rgba(0, 0, 0, 0.12);
   position: relative;
   padding-left: 1.28rem;
 }
@@ -98,8 +98,8 @@
 @media (min-width: 768px) {
   .eh-bullets li {
     font-size: 0.84rem;
-    padding: 0.5rem 0.7rem;
-    padding-left: 1.4rem;
+    padding: 0.55rem 0.75rem;
+    padding-left: 1.42rem;
   }
 }
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/styles/home-surface.css'
 import EnergyBackground from '@/components/wizard/EnergyBackground.vue'
 import EnergyHomeHero from '@/components/home/EnergyHomeHero.vue'
 import EnergyHomeSegmentation from '@/components/home/EnergyHomeSegmentation.vue'
@@ -41,12 +42,12 @@ import EnergyHomeClosingCta from '@/components/home/EnergyHomeClosingCta.vue'
   max-width: 72rem;
   margin: 0 auto;
   /* Mobile: menos relleno lateral, respeta notch; más aire vertical abajo */
-  padding: 0.75rem max(0.75rem, env(safe-area-inset-left)) 1.75rem max(0.75rem, env(safe-area-inset-right));
+  padding: 1rem max(0.875rem, env(safe-area-inset-left)) 2.25rem max(0.875rem, env(safe-area-inset-right));
 }
 
 @media (min-width: 768px) {
   .eh-main {
-    padding: 1.75rem 1.5rem 2.75rem;
+    padding: 2rem 1.75rem 3.25rem;
   }
 }
 

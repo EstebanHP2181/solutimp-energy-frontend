@@ -22,25 +22,26 @@
 <style scoped>
 .se-glass {
   background: var(--se-glass);
-  border: 1px solid var(--se-glass-border);
-  backdrop-filter: blur(12px);
+  border: 1px solid var(--eh-surface-border);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--eh-surface-inset), var(--eh-surface-shadow);
   border-radius: var(--se-radius-lg);
-  padding: 1.05rem 0.9rem 1.1rem;
+  padding: 1.15rem 1rem 1.2rem;
 }
 
 @media (min-width: 768px) {
   .se-glass {
-    padding: 1.25rem 1.15rem 1.35rem;
+    padding: 1.35rem 1.2rem 1.4rem;
   }
 }
 
 .eh-section {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.75rem;
 }
 
 @media (min-width: 768px) {
   .eh-section {
-    margin-bottom: 2.25rem;
+    margin-bottom: 2.5rem;
   }
 }
 
@@ -73,7 +74,7 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.38rem;
+  gap: 0.5rem;
   grid-template-columns: 1fr;
 }
 
@@ -91,10 +92,10 @@
   font-weight: 500;
   letter-spacing: 0.01em;
   color: #e2e8f0;
-  padding: 0.42rem 0.55rem;
+  padding: 0.48rem 0.62rem;
   border-radius: 10px;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 @media (min-width: 768px) {
@@ -106,6 +107,7 @@
 
 .eh-ico {
   color: var(--se-cyan);
+  opacity: 0.62;
   font-size: 0.65rem;
   flex-shrink: 0;
 }

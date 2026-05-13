@@ -1,0 +1,10 @@
+/**
+ * Profundidad visual sobria para el Home (import solo desde LandingPage).
+ * Sin glow de color: relieve tipo “capa de vidrio” sobre fondo oscuro.
+ */
+:root {
+  --eh-surface-inset: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  --eh-surface-shadow: 0 10px 36px rgba(0, 0, 0, 0.16);
+  --eh-surface-shadow-soft: 0 6px 22px rgba(0, 0, 0, 0.12);
+  --eh-surface-border: rgba(255, 255, 255, 0.09);
+}

@@ -29,17 +29,18 @@ import { waSpecialistHref } from './energyHomeLinks'
 <style scoped>
 .se-glass {
   background: var(--se-glass);
-  border: 1px solid var(--se-glass-border);
-  backdrop-filter: blur(14px);
+  border: 1px solid var(--eh-surface-border);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--eh-surface-inset), var(--eh-surface-shadow);
   border-radius: var(--se-radius-lg);
-  padding: 1.1rem 0.95rem 1.2rem;
-  margin-bottom: 1.5rem;
+  padding: 1.2rem 1.05rem 1.3rem;
+  margin-bottom: 1.75rem;
 }
 
 @media (min-width: 768px) {
   .se-glass {
-    padding: 1.35rem 1.2rem 1.45rem;
-    margin-bottom: 1.75rem;
+    padding: 1.45rem 1.3rem 1.55rem;
+    margin-bottom: 2rem;
   }
 }
 
@@ -71,7 +72,8 @@ import { waSpecialistHref } from './energyHomeLinks'
 .eh-actions {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.55rem;
+  margin-top: 0.25rem;
 }
 
 @media (min-width: 520px) {
@@ -105,11 +107,12 @@ import { waSpecialistHref } from './energyHomeLinks'
 .eh-btn--primary {
   color: #061426;
   background: linear-gradient(135deg, var(--se-green) 0%, var(--se-cyan) 100%);
-  box-shadow: 0 6px 22px rgba(0, 200, 150, 0.2);
+  box-shadow: var(--eh-surface-inset), 0 2px 12px rgba(0, 0, 0, 0.22);
 }
 
 .eh-btn--primary:hover {
   transform: translateY(-1px);
+  box-shadow: var(--eh-surface-inset), 0 4px 18px rgba(0, 0, 0, 0.28);
 }
 
 .eh-btn--wa {
@@ -120,6 +123,7 @@ import { waSpecialistHref } from './energyHomeLinks'
 
 .eh-btn--wa:hover {
   transform: translateY(-1px);
+  box-shadow: var(--eh-surface-inset), 0 3px 14px rgba(0, 0, 0, 0.2);
 }
 
 @media (min-width: 520px) {

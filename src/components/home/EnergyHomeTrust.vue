@@ -13,25 +13,26 @@
 <style scoped>
 .se-glass {
   background: var(--se-glass);
-  border: 1px solid var(--se-glass-border);
-  backdrop-filter: blur(12px);
+  border: 1px solid var(--eh-surface-border);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--eh-surface-inset), var(--eh-surface-shadow);
   border-radius: var(--se-radius-lg);
-  padding: 1.05rem 0.9rem 1.1rem;
+  padding: 1.15rem 1rem 1.2rem;
 }
 
 @media (min-width: 768px) {
   .se-glass {
-    padding: 1.25rem 1.15rem 1.35rem;
+    padding: 1.35rem 1.2rem 1.4rem;
   }
 }
 
 .eh-section {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.75rem;
 }
 
 @media (min-width: 768px) {
   .eh-section {
-    margin-bottom: 2.25rem;
+    margin-bottom: 2.5rem;
   }
 }
 

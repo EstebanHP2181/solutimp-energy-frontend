@@ -61,22 +61,23 @@ import { waCondominiumHref } from './energyHomeLinks'
 <style scoped>
 .se-glass {
   background: var(--se-glass);
-  border: 1px solid var(--se-glass-border);
-  backdrop-filter: blur(12px);
+  border: 1px solid var(--eh-surface-border);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--eh-surface-inset), var(--eh-surface-shadow);
 }
 
 .eh-section {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.75rem;
 }
 
 @media (min-width: 768px) {
   .eh-section {
-    margin-bottom: 2.25rem;
+    margin-bottom: 2.5rem;
   }
 }
 
 .eh-h2 {
-  margin: 0 0 0.35rem;
+  margin: 0 0 0.5rem;
   font-size: clamp(1.08rem, 3.2vw, 1.4rem);
   font-weight: 700;
   letter-spacing: -0.018em;
@@ -85,7 +86,7 @@ import { waCondominiumHref } from './energyHomeLinks'
 }
 
 .eh-lead {
-  margin: 0 0 0.9rem;
+  margin: 0 0 1rem;
   font-size: 0.88rem;
   color: var(--se-text-muted);
   line-height: 1.55;
@@ -102,7 +103,7 @@ import { waCondominiumHref } from './energyHomeLinks'
 
 .eh-grid {
   display: grid;
-  gap: 0.7rem;
+  gap: 0.85rem;
   grid-template-columns: 1fr;
 }
 
@@ -183,7 +184,7 @@ import { waCondominiumHref } from './energyHomeLinks'
 
 .eh-card-cta:hover {
   transform: translateY(-1px);
-  box-shadow: 0 5px 16px rgba(0, 200, 150, 0.2);
+  box-shadow: var(--eh-surface-inset), 0 3px 14px rgba(0, 0, 0, 0.22);
 }
 
 .eh-card-cta--wa {

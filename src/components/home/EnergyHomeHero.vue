@@ -37,26 +37,27 @@ import { RouterLink } from 'vue-router'
 <style scoped>
 .se-glass {
   background: var(--se-glass);
-  border: 1px solid var(--se-glass-border);
-  backdrop-filter: blur(14px);
+  border: 1px solid var(--eh-surface-border);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--eh-surface-inset), var(--eh-surface-shadow);
 }
 
 .eh-hero {
   border-radius: var(--se-radius-lg);
-  padding: 1.1rem 0.95rem 1.2rem;
-  margin: 0 auto 1.5rem;
+  padding: 1.25rem 1.05rem 1.35rem;
+  margin: 0 auto 1.75rem;
   max-width: 52rem;
 }
 
 @media (min-width: 560px) {
   .eh-hero {
-    padding: 1.35rem 1.2rem 1.45rem;
-    margin-bottom: 1.75rem;
+    padding: 1.5rem 1.35rem 1.55rem;
+    margin-bottom: 2rem;
   }
 }
 
 .eh-eyebrow {
-  margin: 0 0 0.4rem;
+  margin: 0 0 0.45rem;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -75,6 +76,7 @@ import { RouterLink } from 'vue-router'
 
 .eh-sub {
   margin: 0 0 0.85rem;
+  max-width: 38rem;
   font-size: clamp(0.9rem, 2.6vw, 1.05rem);
   line-height: 1.58;
   letter-spacing: 0.01em;
@@ -97,6 +99,7 @@ import { RouterLink } from 'vue-router'
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
+  margin-top: 0.35rem;
 }
 
 @media (min-width: 560px) {
@@ -133,12 +136,12 @@ import { RouterLink } from 'vue-router'
 .eh-btn--primary {
   color: #061426;
   background: linear-gradient(135deg, var(--se-green) 0%, var(--se-cyan) 100%);
-  box-shadow: 0 6px 22px rgba(0, 200, 150, 0.22);
+  box-shadow: var(--eh-surface-inset), 0 2px 12px rgba(0, 0, 0, 0.22);
 }
 
 .eh-btn--primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 28px rgba(0, 200, 150, 0.28);
+  box-shadow: var(--eh-surface-inset), 0 4px 18px rgba(0, 0, 0, 0.28);
 }
 
 .eh-btn--ghost {
@@ -149,6 +152,7 @@ import { RouterLink } from 'vue-router'
 
 .eh-btn--ghost:hover {
   background: rgba(255, 255, 255, 0.08);
+  box-shadow: var(--eh-surface-inset), var(--eh-surface-shadow-soft);
 }
 
 @media (min-width: 560px) {

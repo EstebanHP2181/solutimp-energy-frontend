@@ -39,17 +39,18 @@
 <style scoped>
 .se-glass {
   background: var(--se-glass);
-  border: 1px solid var(--se-glass-border);
-  backdrop-filter: blur(10px);
+  border: 1px solid var(--eh-surface-border);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--eh-surface-inset), var(--eh-surface-shadow);
 }
 
 .eh-section {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.75rem;
 }
 
 @media (min-width: 768px) {
   .eh-section {
-    margin-bottom: 2.25rem;
+    margin-bottom: 2.5rem;
   }
 }
 
@@ -75,12 +76,12 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.65rem;
 }
 
 @media (min-width: 768px) {
   .eh-steps {
-    gap: 0.7rem;
+    gap: 0.8rem;
   }
 }
 
