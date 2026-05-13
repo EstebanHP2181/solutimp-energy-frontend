@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue'
-import { useRouter } from 'vue-router'
-import { calculadoraFlowKey } from '@/composables/useCalculadoraFlow'
+import { calculadoraFlowKey, type CalcMainGoal, type CalcPropertyType } from '@/composables/useCalculadoraFlow'
 import {
   AUTONOMY_RANGE_DISCLAIMER,
   getEnergyNarrativeContext,
@@ -15,7 +14,30 @@ import { buildWhatsAppLink } from '@/shared/whatsapp'
 
 const flow = inject(calculadoraFlowKey)!
 
-const router = useRouter()
+function propertyLabel(propertyType: CalcPropertyType): string {
+  const m: Record<Exclude<CalcPropertyType, ''>, string> = {
+    casa: 'Casa',
+    parcela: 'Parcela / campo',
+    empresa: 'Empresa / oficina',
+    condominio: 'Condominio',
+    bodega: 'Bodega / industrial',
+  }
+  return propertyType && propertyType in m
+    ? m[propertyType as Exclude<CalcPropertyType, ''>]
+    : 'Por definir'
+}
+
+function objectiveLabel(goal: CalcMainGoal): string {
+  const m: Record<Exclude<CalcMainGoal, ''>, string> = {
+    ahorro: 'Reducir mi boleta eléctrica',
+    respaldo: 'Mantener mi propiedad operativa durante cortes',
+    equipos_criticos: 'Lograr mayor autonomía energética',
+    vender_excedente: 'Aprovechar excedentes solares',
+    empresa: 'Busco un equilibrio general',
+  }
+  return goal && goal in m ? m[goal as Exclude<CalcMainGoal, ''>] : 'Por definir'
+}
+
 
 const narration = computed(() =>
   getEnergyNarrativeContext({
@@ -253,31 +275,81 @@ const compareBar = computed(() => {
 })
 
 const waHref = computed(() => {
-  const dec = declaredMonthlyBill.value
+  const lines: string[] = []
+  lines.push('Hola Solutimp Energy ⚡')
+  lines.push('')
+  lines.push('Completé una evaluación energética preliminar y me interesa avanzar.')
+  lines.push('')
+
+  const reg = flow.region?.trim()
+  const com = flow.comuna?.trim()
+  const locParts: string[] = []
+  if (reg) locParts.push(flow.regionLabel(reg))
+  if (com) locParts.push(com)
+  const locationLine =
+    locParts.length > 0 ? locParts.join(' · ') : flow.calcLocationLine?.trim() || 'ubicación por confirmar'
+
+  lines.push(`📍 Propiedad: ${propertyLabel(flow.propertyType)} · ${locationLine}`)
+  lines.push('')
+
+  const kStr = narrativeKwpStr.value
+  const pN = narrativePanelsN.value
+  let systemLine = ''
+  if (kStr != null && pN != null) {
+    systemLine = `${kStr} kWp · ${pN} paneles`
+  } else if (kStr != null) {
+    systemLine = `${kStr} kWp (paneles por confirmar)`
+  } else if (pN != null) {
+    systemLine = `${pN} paneles (kWp por confirmar)`
+  } else {
+    systemLine = 'dimensionamiento referencial por confirmar en visita técnica'
+  }
+  lines.push(`⚡ Sistema estimado: ${systemLine}`)
+  lines.push('')
+
+  const cur = referenceBill.value
+  const isDeclared = declaredMonthlyBill.value != null
+  const billCurrentLine =
+    cur != null && Number.isFinite(cur) && cur > 0
+      ? `${formatCLP(Math.round(cur))}/mes${isDeclared ? '' : ' (referencia estimada)'}`
+      : 'por confirmar'
+  lines.push(`💰 Boleta actual${isDeclared ? ' declarada' : ''}: ${billCurrentLine}`)
+  lines.push('')
+
   const sol = solarBill.value
+  const newBillLine =
+    sol != null && Number.isFinite(sol) && sol >= 0
+      ? `${formatCLP(Math.round(sol))}/mes`
+      : 'sujeto a evaluación técnica'
+  lines.push(`📉 Nueva boleta estimada: ${newBillLine}`)
+  lines.push('')
+
   const ann = econ.value?.annual_savings
+  const annualLine =
+    ann != null && Number.isFinite(ann) && ann > 0 ? formatCLP(Math.round(ann)) : 'por confirmar'
+  lines.push(`✅ Ahorro anual estimado: ${annualLine}`)
+  lines.push('')
 
-  let body = 'Hola, completé una evaluación preliminar de autonomía energética en Solutimp Energy.'
-  const hasDec = dec != null && Number.isFinite(dec) && dec > 0
-  const hasSol = sol != null && Number.isFinite(sol) && sol >= 0
-  const hasAnn = ann != null && Number.isFinite(ann) && ann > 0
+  const y = econ.value?.roi_years
+  let roiLine = 'por confirmar con especialista'
+  if (y != null && Number.isFinite(y) && y > 0) {
+    const center = Math.round(y)
+    const low = Math.max(5, center - 2)
+    const high = Math.min(16, center + 2)
+    roiLine = `${low}–${high} años`
+  }
+  lines.push(`📈 Retorno estimado: ${roiLine}`)
+  lines.push('')
 
-  if (hasDec && dec != null) {
-    body += ` Declaré una boleta de ${formatCLP(Math.round(dec))}/mes`
-  }
-  if (hasSol && sol != null) {
-    body += hasDec
-      ? ` y el evaluador estimó un escenario con infraestructura solar de ${formatCLP(Math.round(sol))}/mes`
-      : ` El evaluador estimó un escenario con infraestructura solar de ${formatCLP(Math.round(sol))}/mes`
-  }
-  if (hasAnn && ann != null) {
-    body += hasDec || hasSol
-      ? `, con ahorro anual aproximado de ${formatCLP(Math.round(ann))}`
-      : ` Ahorro anual aproximado de ${formatCLP(Math.round(ann))}`
-  }
-  body += ' ' + narration.value.whatsappIntentLine
-  body += ' Quiero que un especialista revise mi caso.'
-  return buildWhatsAppLink(body)
+  lines.push(`🎯 Objetivo: ${objectiveLabel(flow.mainGoal)}`)
+  lines.push('')
+  lines.push('Me gustaría una evaluación técnica completa con un especialista.')
+  lines.push('')
+  lines.push(
+    'Esta simulación es referencial y debe validarse con consumo real, superficie disponible, orientación, sombras y condiciones técnicas del inmueble.',
+  )
+
+  return buildWhatsAppLink(lines.join('\n'))
 })
 </script>
 
@@ -547,19 +619,15 @@ const waHref = computed(() => {
     </p>
 
     <div class="plan-cta-row animate" style="animation-delay: 0.2s">
-      <button type="button" class="cta-primary-onboarding" @click="router.push('/onboarding')">
-        Quiero mi evaluación técnica completa →
-      </button>
+      <a :href="waHref" target="_blank" rel="noopener" class="cta-primary-wa">
+        Enviar mi evaluación por WhatsApp →
+      </a>
 
       <p class="sim-disclaimer">
         <span aria-hidden="true">ℹ️</span>
         Simulación preliminar basada en el valor de tu boleta. Para una propuesta exacta revisaremos consumo real,
         orientación, sombras y superficie disponible.
       </p>
-
-      <a :href="waHref" target="_blank" rel="noopener" class="wa-link-secondary">
-        ¿Prefieres hablar ahora? Contactar especialista por WhatsApp
-      </a>
     </div>
 
   </div>
@@ -1483,9 +1551,10 @@ const waHref = computed(() => {
   align-items: flex-start;
 }
 
-.cta-primary-onboarding {
+.cta-primary-wa {
   display: block;
   width: 100%;
+  box-sizing: border-box;
   padding: 16px;
   background: var(--se-green, #1d9e75);
   color: #fff;
@@ -1495,32 +1564,19 @@ const waHref = computed(() => {
   font-weight: 700;
   cursor: pointer;
   text-align: center;
+  text-decoration: none;
   transition:
     background 0.2s,
     transform 0.1s;
   margin-bottom: 12px;
 }
 
-.cta-primary-onboarding:hover {
+.cta-primary-wa:hover {
   background: #168a63;
   transform: translateY(-1px);
 }
 
-.cta-primary-onboarding:active {
+.cta-primary-wa:active {
   transform: translateY(0);
-}
-
-.wa-link-secondary {
-  display: block;
-  text-align: center;
-  margin-top: 12px;
-  font-size: 0.88rem;
-  color: var(--se-text-muted, #8899aa);
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.wa-link-secondary:hover {
-  color: var(--se-green, #1d9e75);
 }
 </style>
