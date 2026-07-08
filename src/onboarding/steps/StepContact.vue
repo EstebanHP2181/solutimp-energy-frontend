@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue'
-import { submitEnergyLead } from '@/api/energyLeads'
+import { submitEnergyLead, ENERGY_PRIVACY_POLICY_URL } from '@/api/energyLeads'
 import ChilePhoneField from '@/components/contact/ChilePhoneField.vue'
 import { wizardInjectionKey } from '@/composables/useWizard'
 import { isValidChileMobileDigits8, normalizeChileMobileToE164 } from '@/shared/chilePhone'
@@ -32,6 +32,7 @@ async function submit() {
     email: w.email.trim(),
     communeOrAddress: w.communeOrAddress.trim() || undefined,
     acceptedContact: w.acceptedContact,
+    source: 'onboarding',
   })
   submitting.value = false
   w.next()
@@ -64,7 +65,10 @@ async function submit() {
       </div>
       <label class="chk">
         <input v-model="w.acceptedContact" type="checkbox" />
-        <span>Acepto ser contactado por Solutimp Energy.</span>
+        <span>
+          Acepto ser contactado por Solutimp Energy conforme a la
+          <a :href="ENERGY_PRIVACY_POLICY_URL" target="_blank" rel="noopener noreferrer">Política de Privacidad</a>.
+        </span>
       </label>
     </div>
     <button type="button" class="se-btn" :disabled="!canSubmit || submitting" @click="submit">

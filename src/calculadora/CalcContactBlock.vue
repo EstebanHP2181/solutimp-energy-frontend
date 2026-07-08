@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue'
-import { submitEnergyLead } from '@/api/energyLeads'
+import { submitEnergyLead, ENERGY_PRIVACY_POLICY_URL } from '@/api/energyLeads'
 import { calculadoraFlowKey } from '@/composables/useCalculadoraFlow'
 import {
   CHILE_MOBILE_PREFIX,
@@ -64,6 +64,7 @@ async function submit() {
     utm_campaign: utm.utm_campaign,
     utm_content: utm.utm_content,
     utm_term: utm.utm_term,
+    source: 'calculadora',
   })
   submitting.value = false
   sent.value = true
@@ -117,7 +118,10 @@ async function submit() {
         </div>
         <label class="chk">
           <input v-model="flow.acceptedContact" type="checkbox" />
-          <span>Acepto ser contactado por Solutimp Energy.</span>
+          <span>
+            Acepto ser contactado por Solutimp Energy conforme a la
+            <a :href="ENERGY_PRIVACY_POLICY_URL" target="_blank" rel="noopener noreferrer">Política de Privacidad</a>.
+          </span>
         </label>
       </div>
       <button type="button" class="se-btn" :disabled="!canSubmit || submitting" @click="submit">
